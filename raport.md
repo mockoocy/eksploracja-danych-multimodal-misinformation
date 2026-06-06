@@ -1,18 +1,32 @@
-Wprowadzenie i podstawy teoretyczne
+## Wprowadzenie i podstawy teoretyczne
 
-Pipeline & Workflow
+The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
 
-Organizacja i stadie projektu
+The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the feature space for detecting fakes. The presence of text-image pairs opens up enormous prospects for implicit fact-checking tasks, where one modality serves as an evidence base for verifying the other. An algorithm can use the visual details of a photograph as strict proof of the truthfulness or falsity of a written headline, and conversely, analyse the text to confirm the authenticity of the attached picture, thereby identifying subtle discrepancies between the stated meaning and the actual visual content.
 
-Cel i zadanie
+Fakeddit represents an unprecedentedly large dataset, containing more than one million (1,063,106) unique samples of news and posts collected from the Reddit platform via the pushshift.io API. This dataset covers almost a decade, starting from 2008, which allows machine learning algorithms not only to capture short-term trends but also to adapt deeply to the evolution of cultural-linguistic patterns and changes in the news agenda. More than 300,000 unique users from 22 different thematic communities (subreddits) contributed to the formation of the database, ensuring an incredible diversity of perspectives, writing styles, and topics covered — from political analysis to everyday observations. The authors meticulously extracted not only the headlines and attached images but also rich metadata, including scores, author names, and audience comments. Moreover, about 64% of the entire final dataset consists of fully multimodal samples containing both textual and graphical components.
 
-Problemy i wyzwania
+The high quality and reliability of the collected dataset were ensured through a strict multi-level filtering system that completely eliminated the need to manually sort each of the million items. At the first stage, primary cleaning occurred naturally through the moderators of the subreddits themselves, who promptly remove any posts that violate platform rules or do not fit the community's theme. At the second stage, the authors harnessed the collective intelligence of Reddit’s thousands of users, excluding from the dataset absolutely all posts with a user rating below one, reasonably assuming that such low scores reliably mark irrelevant or outright low-quality content. Finally, for final confirmation of the reliability of the selected sources, the researchers conducted a control manual check, randomly examining ten posts from each community. They excluded those sources whose content deviated from the stated topic, leaving only the 22 cleanest and most relevant subreddits for the final database.
 
-Hipotezy i oczekiwane wyniki
+Labeling the vast amount of data was performed using the distant supervision method — an approach that involves automatically assigning labels to all posts based on the known general theme of the subreddit from which they were extracted. This eliminates the need to manually label each individual post. Depending on the task, the dataset supports three levels of classification nesting: binary (basic division into truth and fake), ternary (where fakes are further divided into completely false and those where the text itself is truthful, such as direct quotations from propaganda posters), and the deepest six-level classification. This detailed classification presents six labels. The True label covers reliable content that fully corresponds to actual facts. Satire/Parody includes posts that present truthful current information in a satirical or parodic manner, which formally makes them false in a literal reading. Misleading Content describes information that has been intentionally distorted to manipulate and deceive the audience. False Connection marks cases where the attached image completely does not match the textual description, creating a false visual context. Manipulated Content refers to artificially fabricated or edited photographs. The sixth label is Imposter Content — content generated by specially trained bots that plausibly mimic the behaviour of real people on the platform in order to intentionally sow chaos in the information environment and confuse algorithms. It is important to note that some of these categories, in particular Manipulated Content, consist almost entirely of visually altered pictures, so when creating narrowly focused models that analyse only textual data, it is advisable to disregard such labels so as not to introduce unnecessary mathematical noise into the training sample.
 
-Eksploracja i czyszczenie - 1
+During extensive experiments aimed at testing the effectiveness of the collected data, the dataset authors preliminarily filtered out all incomplete samples lacking text or images to ensure the purity of comparison across different modalities. To extract deep semantic features from texts, the researchers used the InferSent model, which has proven itself as a generator of universal sentence embeddings, as well as the advanced BERT architecture, which shows outstanding results in natural language understanding. For parallel processing of visual information, powerful computer vision neural networks such as VGG16, ResNet50, and the more modern EfficientNet were employed. The training process for hybrid models was based on the use of dense layers, where the extracted vectors of text and images were combined using various mathematical methods — addition, concatenation, maximum computation, and averaging — after which the resulting tensor was passed to a final softmax classifier. The results of these comprehensive tests unequivocally demonstrated the superiority of the multimodal approach: algorithms that analysed text and images together consistently outperformed models trained on only one modality. The absolute winner among all configurations was the combination of the BERT text embedder and the ResNet50 visual network, combined via the maximum computation method, confirming the critical importance of merging contexts for fake news recognition.
 
-Wyniki dla Baseline Model - 2
+The in-depth error analysis conducted by the researchers revealed a number of very interesting patterns and vulnerabilities of modern classification algorithms. It turned out that the most difficult category for baseline networks to recognise was Imposter Content. This is quite logical: the modern generative algorithms underlying such bots so skilfully mimic human speech and communication style that they create hyper-realistic texts, almost indistinguishable from posts by real users. The second most difficult category for the models was Satire/Parody, because the creators of satirical posts deliberately and very accurately copy the formal style of real mass media. For an algorithm to successfully detect satire, it is not enough to simply analyse syntax or word sentiment — it requires deep contextual knowledge of how the real world works, which baseline models do not yet possess to a sufficient degree. At the same time, the authors were pleasantly surprised by the fact that the final multimodal neural network was able to handle the Manipulated Content category almost flawlessly, easily detecting traces of editing and photoshopping in images. Furthermore, the analysis showed that in ambiguous situations, the model often tended to erroneously assign the True label simply because in the detailed classification this category remains the most numerous, creating a natural class imbalance in the training sample.
+
+## Pipeline & Workflow
+
+### Organizacja i stadie projektu
+
+### Cel i zadanie
+
+### Problemy i wyzwania
+
+### Hipotezy i oczekiwane wyniki
+
+## Eksploracja i czyszczenie - 1
+
+## Wyniki dla Baseline Model - 2
 
 This will be a simple, text-only TF-IDF model based on unigrams and bigrams. Metadata and images (additional modalities in p=other words) will be ommited for this step of project advancement.
 
@@ -108,7 +122,7 @@ Rank 20 looks like revealed that surprised skeltal obvious bolshevism
 
 ![alt text](pictures_eksploracja_projekt/2confusion_matrix_multiclass_baseline.png)
 
-Wyniki dla zaawansowanych modeli - 3
+## Wyniki dla zaawansowanych modeli - 3
 
 ![alt text](pictures_eksploracja_projekt/3minilm-really__lgbm_ad.png)
 ![alt text](pictures_eksploracja_projekt/3minilm-really__logreg_ad.png)
@@ -126,12 +140,12 @@ Wyniki dla zaawansowanych modeli - 3
 | minilm-really\_\_rf     | 0.873984 | 0.378978 | 0.638250 | 0.731601        | 0.364581     |
 | paraphrase\_\_rf        | 0.852571 | 0.356497 | 0.617186 | 0.700508        | 0.343049     |
 
-Wyniki dla Optuna - 4
+## Wyniki dla Optuna - 4
 
 The Baseline
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_baseline.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_baseline.jpg)
+![alt text](pictures_eksploracja_projekt/4confusion_matrix_baseline.jpg)
+![alt text](pictures_eksploracja_projekt/4optuna_history_baseline.jpg)
 
 Test f1 macro for the best baseline model: 0.5585
 
@@ -194,6 +208,21 @@ Misleading 0.3105 0.6517 0.4206 5203
 
 The minim_lgbm (trzeba dopełnić)
 
+![alt text](pictures_eksploracja_projekt/4confusion_matrix_minilm_lgbm.jpg)
+![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_lgbm.jpg)
+
+Test f1 macro for the best minilm_lgbm model: 0.5449
+precision recall f1-score support
+True 0.8079 0.6638 0.7288 53554
+Satire / parody 0.3214 0.5739 0.4120 8019
+False connection 0.5673 0.5335 0.5499 25895
+Imposter content 0.1946 0.5146 0.2824 2849
+Manipulated 0.7960 0.7450 0.7696 40350
+Misleading 0.4367 0.6629 0.5265 5203
+accuracy 0.6546 135870
+macro avg 0.5206 0.6156 0.5449 135870
+weighted avg 0.7027 0.6546 0.6710 135870
+
 The paraphrase_lgbm
 
 ![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_lgbm.jpg)
@@ -214,7 +243,7 @@ The paraphrase_lgbm
            macro avg     0.4841    0.5854    0.5003    135870
         weighted avg     0.6808    0.6094    0.6340    135870
 
-Wyniki na neurosieci - 5
+## Wyniki na neurosieci - 5
 
 ![alt text](pictures_eksploracja_projekt/5_some_hard_stuff_with_pictures.jpg)
 
