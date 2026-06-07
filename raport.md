@@ -1,83 +1,109 @@
-## Introduction and therotical fundamentals
+# Introduction
 
-The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content. The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the feature space for detecting fakes. The presence of text-image pairs opens up enormous prospects for implicit fact-checking tasks, where one modality serves as an evidence base for verifying the other. An algorithm can use the visual details of a photograph as strict proof of the truthfulness or falsity of a written headline, and conversely, analyse the text to confirm the authenticity of the attached picture, thereby identifying subtle discrepancies between the stated meaning and the actual visual content.
+## Motivation behind misinformation classification.
 
-Fakeddit represents an unprecedentedly large dataset, containing more than one million (1,063,106) unique samples of news and posts collected from the Reddit platform via the pushshift.io API. This dataset covers almost a decade, starting from 2008, which allows machine learning algorithms not only to capture short-term trends but also to adapt deeply to the evolution of cultural-linguistic patterns and changes in the news agenda. More than 300,000 unique users from 22 different thematic communities (subreddits) contributed to the formation of the database, ensuring an incredible diversity of perspectives, writing styles, and topics covered — from political analysis to everyday observations. The authors meticulously extracted not only the headlines and attached images but also rich metadata, including scores, author names, and audience comments. Moreover, about 64% of the entire final dataset consists of fully multimodal samples containing both textual and graphical components. The high quality and reliability of the collected dataset were ensured through a strict multi-level filtering system that completely eliminated the need to manually sort each of the million items. At the first stage, primary cleaning occurred naturally through the moderators of the subreddits themselves, who promptly remove any posts that violate platform rules or do not fit the community's theme. At the second stage, the authors harnessed the collective intelligence of Reddit’s thousands of users, excluding from the dataset absolutely all posts with a user rating below one, reasonably assuming that such low scores reliably mark irrelevant or outright low-quality content. Finally, for final confirmation of the reliability of the selected sources, the researchers conducted a control manual check, randomly examining ten posts from each community. They excluded those sources whose content deviated from the stated topic, leaving only the 22 cleanest and most relevant subreddits for the final database.
+The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. People of today frequently access
 
-Labeling the vast amount of data was performed using the distant supervision method — an approach that involves automatically assigning labels to all posts based on the known general theme of the subreddit from which they were extracted. This eliminates the need to manually label each individual post. Depending on the task, the dataset supports three levels of classification nesting: binary (basic division into truth and fake), ternary (where fakes are further divided into completely false and those where the text itself is truthful, such as direct quotations from propaganda posters), and the deepest six-level classification. This detailed classification presents six labels. The True label covers reliable content that fully corresponds to actual facts. Satire/Parody includes posts that present truthful current information in a satirical or parodic manner, which formally makes them false in a literal reading. Misleading Content describes information that has been intentionally distorted to manipulate and deceive the audience. False Connection marks cases where the attached image completely does not match the textual description, creating a false visual context. Manipulated Content refers to artificially fabricated or edited photographs. The sixth label is Imposter Content — content generated by specially trained bots that plausibly mimic the behaviour of real people on the platform in order to intentionally sow chaos in the information environment and confuse algorithms. It is important to note that some of these categories, in particular Manipulated Content, consist almost entirely of visually altered pictures, so when creating narrowly focused models that analyse only textual data, it is advisable to disregard such labels so as not to introduce unnecessary mathematical noise into the training sample.
+Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
 
-During extensive experiments aimed at testing the effectiveness of the collected data, the dataset authors preliminarily filtered out all incomplete samples lacking text or images to ensure the purity of comparison across different modalities. To extract deep semantic features from texts, the researchers used the InferSent model, which has proven itself as a generator of universal sentence embeddings, as well as the advanced BERT architecture, which shows outstanding results in natural language understanding. For parallel processing of visual information, powerful computer vision neural networks such as VGG16, ResNet50, and the more modern EfficientNet were employed. The training process for hybrid models was based on the use of dense layers, where the extracted vectors of text and images were combined using various mathematical methods — addition, concatenation, maximum computation, and averaging — after which the resulting tensor was passed to a final softmax classifier. The results of these comprehensive tests unequivocally demonstrated the superiority of the multimodal approach: algorithms that analysed text and images together consistently outperformed models trained on only one modality. The absolute winner among all configurations was the combination of the BERT text embedder and the ResNet50 visual network, combined via the maximum computation method, confirming the critical importance of merging contexts for fake news recognition. In-depth error analysis conducted by the researchers revealed a number of very interesting patterns and vulnerabilities of modern classification algorithms. It turned out that the most difficult category for baseline networks to recognise was Imposter Content. This is quite logical: the modern generative algorithms underlying such bots so skilfully mimic human speech and communication style that they create hyper-realistic texts, almost indistinguishable from posts by real users. The second most difficult category for the models was Satire/Parody, because the creators of satirical posts deliberately and very accurately copy the formal style of real mass media. For an algorithm to successfully detect satire, it is not enough to simply analyse syntax or word sentiment — it requires deep contextual knowledge of how the real world works, which baseline models do not yet possess to a sufficient degree. At the same time, the authors were pleasantly surprised by the fact that the final multimodal neural network was able to handle the Manipulated Content category almost flawlessly, easily detecting traces of editing and photoshopping in images. Furthermore, the analysis showed that in ambiguous situations, the model often tended to erroneously assign the True label simply because in the detailed classification this category remains the most numerous, creating a natural class imbalance in the training sample.
+## Fakeddit dataset
 
-Within our project, the analysis of the labeled Fakeddit dataset, where each post is initially assigned one of six verifiable labels (from pure truth to satire and imposter content), represents a classic supervised machine learning task. Our goal is to build a mathematical model that can uncover hidden patterns in the provided features and learn to predict the category for new, unseen posts independently. From a theoretical perspective, classification is a process of finding an optimal separating hyperplane (or a set of complex non-linear boundaries) in a multidimensional feature space. The algorithm analyzes the coordinates of each object in this space and computes the probabilities of its belonging to each possible class. Since our task involves distributing objects across six categories at once, we employ multiclass classification strategies. Depending on the chosen algorithm, this problem is solved either by constructing several binary classifiers, each mathematically separating one class from all the others (One‑vs‑Rest strategy), or natively, when the algorithm can directly estimate the probability distribution across all categories simultaneously. Before feeding the data to mathematical classification models, it is necessary to deeply understand their structure, which brings us to the stage of Exploratory Data Analysis (EDA). EDA is a fundamental analytical process in which the researcher uses descriptive statistics and visualization methods to uncover hidden patterns, class imbalance, and structural anomalies. In classic Data Science practice, primary analysis relies on studying the distribution of the target variable, analyzing text lengths, and searching for statistical outliers, since a strong class imbalance will bias the model’s predictions toward the dominant class. An integral part of this stage is data cleaning, which is critically important for preventing so‑called data leakage. Data leakage occurs when information from the test set accidentally overlaps with the training set through duplicate posts. This leads to the model not learning to generalize features but merely memorising specific examples, yielding illusorily high metrics during testing while failing completely in real‑world conditions. The theory of data cleaning relies on applying strict patterns: first, exact deduplication is performed on key fields such as the headline text and the image link. Special attention during cleaning is paid to handling missing values. Practice shows that attempts to fill missing text fragments or metadata with synthetic values often distort the semantic meaning of the post. Therefore, the most reliable pattern is to completely remove rows with missing critical information, thereby preserving the mathematical and semantic purity of the training sample for subsequent stages.
+The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the amount of information that can be used for the detection of misinformation. The data consists of post titles, images associated with them and additional metadata such as creation time, number of comments, subreddit name, etc.
+The overall quality of the data was quite good, no further pre-processing was required over the one provided by the dataset authors.
 
-To objectively evaluate the power of complex modern algorithms, it is common practice in machine learning to first construct a baseline – a basic, mathematically transparent and computationally lightweight model. The baseline serves as a reference point: if a heavy neural network cannot significantly exceed this baseline metric, its use is considered impractical. In our project, the foundation of the baseline is a combination of the TF‑IDF vectorization method and logistic regression. Since algorithms cannot read text directly, the Term Frequency – Inverse Document Frequency (TF‑IDF) method converts words into numbers. The theoretical essence of this method is the creation of a sparse matrix where each unique word gets its own coordinate axis. The method counts the frequency of a term in a specific text but strictly penalises words that occur too often across the entire document corpus (e.g., conjunctions or prepositions), thus mathematically highlighting truly unique and meaningful terms. The resulting numerical vectors are passed to logistic regression – a linear classifier that computes a weighted sum of all object features and passes it through a special logistic function (sigmoid). This function compresses the result into a range from zero to one, which is interpreted as the probability of a post being fake. Logistic regression is ideal for a baseline due to its outstanding interpretability: we can directly extract the model’s weight coefficients to literally see which words the algorithm considers markers of false news.
+The dataset consists of over 1 million posts, of which around 682k have an image associated with them. The posts come from across 22 subreddits.
+During data collection there were also additional quality assurance steps:
 
-Linear models such as logistic regression are often unable to capture complex non‑linear dependencies in texts; therefore, to improve accuracy, we turn to the theory of ensemble learning, applying Random Forest and LightGBM algorithms. The essence of ensembles is to combine many weak algorithms (decision trees) into a single powerful predictive system. Random Forest is based on the theoretical concept of bagging: it builds hundreds of independent deep trees in parallel, training each on a random subsample of data using a random subset of features. This artificial injection of randomness radically reduces the model’s variance and protects it from overfitting to noise. In turn, the LightGBM algorithm belongs to the family of gradient boosting. To understand boosting, one must examine in detail the theory of gradient descent – a classical optimisation method. The gradient of any function in a multidimensional space always points in the direction of its steepest ascent. Since our fundamental goal in machine learning is to minimise the loss function (i.e., to reduce prediction error to an absolute minimum), it is mathematically logical to take a step in the opposite direction, which is called the antigradient. Gradient boosting uses the same logic but applies it in function space: instead of updating weight coefficients, it sequentially adds new trees to the ensemble, each approximating the antigradient and compensating for the errors (residuals) of all previous trees. The specific feature of the LightGBM framework lies in its highly optimized architecture. First, it uses histogram‑based algorithms, which continuously discretise feature values into bins, dramatically reducing memory consumption and accelerating computations. Second, unlike traditional algorithms that grow trees symmetrically level‑by‑level (level‑wise), LightGBM employs a leaf‑wise strategy. This means that for splitting, it always selects only the tree leaf that promises the maximum mathematical reduction in error. Such asymmetric growth allows the algorithm to achieve high accuracy much faster, especially on large and complex datasets.
+- removing all posts with score < 1,
+- subreddit-specific title tags were removed.
 
-Despite its effectiveness, basic TF‑IDF vectorization has a critical theoretical flaw: it completely ignores word order and contextual meaning, treating the text merely as a bag of isolated terms. To enable the model to understand the real semantics of Reddit posts, we turn to the use of language embeddings based on the SentenceTransformers library. Embeddings are dense vectors of numbers in a multidimensional space where the geometric distance between vectors directly reflects the semantic similarity of texts. Thus, phrases with similar meanings, even if they share no common words, end up close to each other. The SentenceTransformers architecture is specifically designed on the basis of siamese neural networks to compress entire sentences into a single compact vector while preserving all the context contained within them. In our research, we apply lightweight models all‑MiniLM‑L12‑v2 and paraphrase‑MiniLM‑L3‑v2. The theoretical value of these models lies in the fact that they are products of knowledge distillation: they were trained to mimic the behaviour of giant neural networks but have significantly fewer parameters, making them incredibly fast in practice. The paraphrase‑family model deserves special attention because it was deliberately trained on paraphrasing databases, making it an ideal tool for our project: it can recognise hidden manipulation even if the authors of a fake news story try to rewrite a known false narrative with new words.
+### Post labels
 
-Having obtained high‑quality semantic features, we must ensure that the classifiers themselves operate at the peak of their capabilities. For this, we apply the Optuna framework; however, to understand its operation, a strict theoretical distinction must be drawn between model parameters and hyperparameters. Parameters (e.g., the weight coefficients of specific words in logistic regression or decision thresholds in LightGBM nodes) are internal values that the algorithm computes and updates by itself during the mathematical learning process. Hyperparameters, on the other hand, are high‑level architectural settings that the engineer sets before training and which define the rules of the game itself. Baseline models always use default hyperparameters created for abstract average tasks. By performing hyperparameter tuning, we adapt the model’s topology to the unique geometry and complexity of our specific news dataset, thereby extracting the maximum quality metric from the algorithm. In our code, for the baseline model we optimise the TF‑IDF settings: the hyperparameters max_df (controlling the removal of corpus noise and stop words) and min_df (responsible for ignoring rare random typos), as well as the regularisation hyperparameter C in logistic regression, which keeps weights from growing excessively and protects the algorithm from overfitting. For the advanced LightGBM, we tune the complex forest structure: the number of trees (n_estimators), the learning rate, as well as the depth and number of leaves, which determine the trees’ ability to capture complex branching patterns in deception. The semantic embeddings themselves remain frozen (static) to achieve enormous computational savings. The uniqueness and superiority of Optuna over classical random search lie in its use of Bayesian optimisation based on the TPE (Tree‑structured Parzen Estimator) algorithm. Instead of blindly testing all possible combinations of settings, Optuna mathematically analyses the history of previous trials, builds a probabilistic model of how settings affect the final F1‑score, and purposefully selects for testing only those hyperparameter values that have the highest statistical chance of improving the result.
+For each sample there are three different labels assigned, corresponding to different levels of granuality:
 
-The final theoretical stage of our project is the transition from purely textual analysis to multimodal analysis, because a significant part of online manipulation relies on visual deception. Computer vision traditionally relied on convolutional neural networks (CNNs), which excelled at extracting object boundaries and textures but poorly understood the deep semantic context of what was happening in a photo. Today, Vision‑Language Models (VLMs) have come to the forefront – complex architectures capable of deeply integrating visual and textual perception. At the core of most modern VLMs lies the cross‑attention mechanism and the concept of Vision Transformers, which cut an image into a grid of small fragments called patches. These visual patches are converted into numbers and mathematically projected into the same hidden vector space as text tokens (words). Thanks to the attention layers, the neural network forces the text tokens to literally “look at” the visual patches, allowing the algorithm to compare the meaning of the written text with specific objects in the photograph. In our pipeline, we use the modern giant model Qwen2.5‑VL‑7B‑Instruct, which contains 7 billion parameters. For feature extraction, we put this LLM into inference mode, feeding it both an image and the post’s headline simultaneously. Passing through the transformer layers, this information is transformed into deep internal hidden states. We programmatically extract the very last layer of these states, apply an attention mask to filter out padding tokens, and then average the values via a mean pooling operation. The output is a single, mathematically enriched vector embedding that contains the fused meaning of the text and the image. The theoretical value of such an approach is enormous: it is precisely this fused vector that enables the final classifier to detect the most difficult category, False Connection, where the text itself may be completely truthful, the original photograph genuine, but their deliberate combination creates a fake, misleading news story.
+- 2-way labels: a `True/False` split - represents whether or not the posts presents factual information
+  ![alt text](images/2_way_label.png)
+- 3-way labels: posts containing false data have been split into two categories:
+  - false text, false sample - sample has `False` label in 2-way labeling and contains untrue information
+  - true text, fale sample - sample has been deemed `False`, but contains "true" text - it involves only posts containing propaganda posters.
+    ![alt text](images/3_way_label.png)
+- 6-way labels: `True` label remains the same as in the other two kinds of labeling, the `False` label has been split into:
+  - imposter content; i.e. content auto-generated by bots
+  - misleading content: content conveyed in a manipulated way to mislead people in believing false narratives
+  - satire / parody
+  - false connection: submission images in this category do not accurately support their text descriptions
+  - manipulated content: content that has been manually altered e.g. via image modifications
+    ![alt text](images/6_way_label.png)
 
-## Pipeline & Workflow
+### The labeling process
 
-To formalise our project, it is necessary to describe in detail the structure and order of the manipulations performed on the data. It should be noted that the creators of the original Fakeddit dataset were extremely concise in their assessments. Their publication contains almost no description of detailed steps, hidden engineering details, or conventions for handling intermediate results, and the final metrics are presented rather sparingly, which complicates their direct analysis. Our project, offering an alternative approach, is conceived not merely as a technical replication but as an attempt to deepen and conceptually rethink the conclusions of the benchmark's authors. The main business task is to independently verify the results obtained by the authors, not simply to compare dry numbers. We strive to build alternative methods for constructing classifiers and to find out whether these new, more modern approaches can surpass the original or provide it with serious competition in real‑world conditions. The implementation of our plan differs qualitatively from that proposed by the original authors due to strict objective constraints. The main challenge of the project was the colossal size of the image database, exceeding 100 gigabytes. Operating with such multimedia arrays on basic computing resources is technically extremely difficult. However, despite these obstacles, we deliberately decided to raise the bar of complexity. We abandoned the initially considered simplified version of the dataset containing only 55,000 items and instead took a huge sample from the original dataset on the Kaggle platform, comprising about 700,000 records. An important consequence of this ambitious decision became a key feature of our pipeline: the vast majority of analytical work is carried out exclusively on textual data. Adding visual content became the absolute pinnacle and the final stage of our project, for which we had to programmatically form a separate representative but reduced subsample from the large dataset.
+In context of Fakeddit dataset it is very important to point out how the labels were assigned. For each subreddit the authors of the dataset chose they've inspected 10 random samples. If the 6-way label they assigned for each of the sample matched - then the subreddit was kept in the dataset and the label was assigned to each post in the subreddit.
+![alt text](images/flawed_labeling.png)
 
-Given the stated business goals and constraints, a strict sequence of dataset analysis was built within the project, consisting of five evolving stages. The peculiarity of our sequence is that each subsequent step logically follows from the limitations and problems of the previous one. The first stage involves exploratory data analysis (EDA) and data cleaning. Without this step, any metrics would be distorted by information noise, so obtaining a clean base of 700,000 items became the foundation for all further actions. In the second stage, having clean data, we create baseline models based on TF‑IDF. The necessity of this step is dictated by the fact that business always needs a starting point — the simplest and fastest algorithm against which all expensive and complex solutions will be compared. However, the baseline relies on primitive word counting and completely ignores the semantics of language. Understanding this conceptual limitation naturally leads to the third stage: testing advanced ensemble models in combination with modern language transformers. Here we use embedders to extract deep meaning from texts and feed these complex data to algorithms such as LightGBM. When we find the most successful combination of model and embedder, the next problem arises — the default algorithm settings do not allow extracting maximum efficiency from it. This makes the transition to the fourth stage inevitable, where the Optuna framework comes into play, using Bayesian optimisation to finely adjust hyperparameters to the specific geometry of our news texts. Finally, even a perfectly tuned text model inevitably hits a quality ceiling, because many fakes in the dataset are built exclusively on visual deception. Recognising that text alone cannot describe a false image logically leads us to the fifth and final stage: creating a highly complex multimodal architecture using a modern Vision‑Language Model (Qwen), which finally closes the blind spots of the purely text‑based pipeline.
+This labeling process makes it so that misinformation classification tasks devolves into task of predicting the subreddit from the title.
+An interesting assignment is "manipulated" for `psbattle_artwork` subreddit - since it consists of posts that rely on image manipulation - albeit it's use seems rather satirical.
 
-Each stage of our pipeline is driven by a set of specific hypotheses and general assumptions. First of all, we expect to achieve results close to those obtained in the original study, assuming that our overwhelming focus on textual data in the first four stages will not lead to a radical drop in metrics compared to the overall benchmark. Secondly, we test the hypothesis that alternative modern text transformers (in particular, architectures of the paraphrase family) will be able to demonstrate significantly better results, even taking into account our computational constraints. We sincerely hope that the theoretical effectiveness of these complex tools will be unequivocally proven in practice, because otherwise the feasibility of their implementation in real business processes would be called into question. Finally, the original text leaves some ambiguity regarding how critical the presence of images is for the claimed fine‑grained classification. Recognising the specificity of the Fakeddit dataset, we assume the particular importance of visual content. Therefore, our final business hypothesis is that the image‑based classification model developed in the fifth stage will show a result at least comparable to the best purely text‑based model, and ideally surpass it, thus proving the absolute necessity of image analysis for fully detecting fake news.
+### Examples
 
-## Eksploracja i czyszczenie - 1
+![alt text](images/huge_cat.png)
 
-The practical implementation of our pipeline begins with a fundamental step – loading and initially examining the raw data array. Data acquisition was carried out along two parallel tracks: loading directly into the Kaggle cloud environment to ensure access to the necessary computing resources at later stages, as well as local deployment of a subsample to test the viability of the baseline code «at home». The richness of the Python ecosystem allows for efficient analysis of huge arrays, but to work with our dataset, which is comparable in complexity to the original and comprises about 700,000 items, we deliberately abandoned traditional tools. Instead of the familiar Pandas library, we used Polars. The architectural superiority of Polars lies in the fact that this library is written in Rust, uses the optimised Apache Arrow memory format, and supports the concept of lazy evaluation combined with process parallelisation. This provides phenomenal data loading and transformation speed, radically outperforming Pandas when working with heavy datasets.
+Above is a picture of a cat titled "he looks huge". This post comes from `confusing_perspective` subreddit - thus it's labeled as false connection.
 
-After successfully loading the data, the structure exploration method allowed us to identify 17 original columns. These include identifiers (id, author), platform metadata (score, num_comments, upvote_ratio, created_utc, subreddit), media links (image_url, domain), textual content (title, clean_title), and three variants of target variables (2_way_label, 3_way_label, 6_way_label). Within our business task, these parameters have a clear hierarchy of importance. The absolute priorities are the cleaned headline text (clean_title), the classification target metrics, and the image_url column, which will become critically important at the final stage of multimodal analysis. User reaction metadata is of secondary interest only, while technical identifiers are completely useless for semantic analysis.
+![godzilla](images/godzilla.jpg.jpeg)
 
-The analysis of the target variable distribution demonstrates a pronounced imbalance. In the binary classification (2‑way), the distribution is approximately 60% false posts versus 40% truthful ones. When moving to ternary classification (3‑way), the false data array splits: about 58% is completely false content, 40% truthful, and just over 2% consists of fake posts that contain truthful text. The most comprehensive six‑way classification (6‑way) shows the following distribution: the truthful news category leads (about 39%), followed by visually manipulative content (30%), false connection between text and image (19%), satire (6%), misleading content (4%), and imposter content (about 2%).
+The above post is titled "Obligatory godzilla post" and comes from `psbattle_artwork` subreddit.
 
-To cross-check the claims of the original paper’s authors, we constructed a special visualisation of the text length distribution. The code results confirmed that the vast majority of headlines contain between 2 and 10 words, after which the distribution density drops sharply and significantly. In a similar manner, we analysed the distribution of user scores (upvotes). The data expectedly demonstrated an exponential decline: the median score is only 14 points, and only an extremely small fraction of posts go viral, receiving tens of thousands of likes. The chronological distribution of posts by creation date (created_date) shows a steady increase in platform activity over the years, reaching its peak towards the end of 2019.
+![propangaposter](images/propagandaposter.webp)
 
-A key discovery during the EDA stage was the visualisation of the distribution of six‑way classifiers across subreddits. We found an almost one hundred percent, rigid dependency between the fake category and the community in which it was posted. If we had left the subreddit column as a feature for training, our model would become completely deterministic based solely on this parameter. The algorithm would simply memorise the association of a specific subreddit with a specific label, ignoring the actual linguistic analysis of the text – a classic example of destructive data leakage. For this reason, the subreddit column, despite its apparent informativeness, was irrevocably removed from the pipeline, along with author names and domains.
+Cleaned title: "newspaper illustration depicting japan shooting china with the bullet of civilization first sinojapanese war"
 
-The final chord of the first stage was deep data cleaning. We applied an exact duplicate search method, grouping the array by the unique combination of cleaned title (clean_title) and image URL (image_url), keeping only the first unique occurrence. This solution eliminated information noise and prevented models from overfitting on repeated posts, significantly increasing the fairness of future metrics on the test set. Additionally, analysis of the missing value matrix revealed more than 201,000 gaps in the comment and score columns. Further investigation showed that the vast majority of these anomalies are strongly correlated with the subreddit psbattle_artwork, which is currently removed from the Reddit platform. Our decision to completely delete all rows associated with this inactive community allowed us both to get rid of a huge array of null values and to cleanse the dataset of content whose primary veracity can no longer be independently verified.
+![propaganda2](images/propangda2.webp)
 
-![alt text](pictures_eksploracja_projekt/1distribution_2way_labels.png)
-2-way labels
+Another propaganda poster "roosevelt figured wrong the tentacles of the dollaroctopus will be cut the jews in the white house and the gold in fort knox have been surrounded by young people by the armies of labor nsb poster from the netherlands"
 
-![alt text](pictures_eksploracja_projekt/1distribution_3way_labels.png)
-3-way labels
+### Temporal resolution
 
-![alt text](pictures_eksploracja_projekt/1distribution_6way_labels.png)
-6-way labels
+The dataset contains data from quite large date range. The first posts come from 2008, while the last ones from 2019.
 
-![alt text](pictures_eksploracja_projekt/1distribution_cleaned_title_counts.png)
-Distribution of words in titles
+![temp](images/temporal_res.png)
 
-![alt text](pictures_eksploracja_projekt/1distribution_subreddit_scores.png)
-Distribution of subreddit scores per post
+### Splitting the data
 
-![alt text](pictures_eksploracja_projekt/1distribution_posts_over_time.png)
-Distribution of post according to the date
+For the purpose of the training we have split the data using 60/20/20 stratified split. The usage of temporal split also seemed justified initially, but the labeling strategy used by the dataset author makes it so that time is not main source of bias. For example: post in the `usnews` subreddit are automatically assigned as truthful, regardless of the date.
 
-![alt text](pictures_eksploracja_projekt/1distribution_6way_subreddit_labels.png)
-Indicative distribution of labels within subreddits
+### Provided metadata
 
-## Wyniki dla Baseline Model - 2
+The dataset provides also information on:
 
-This will be a simple, text-only TF-IDF model based on unigrams and bigrams. Metadata and images (additional modalities in p=other words) will be ommited for this step of project advancement.
+- author (almost 35k different values!)
+- scores (upvotes - downvotes)
+- upvote ratio
+- number of comments
+- etc
 
-Class distribution (Training set - Binary):
-shape: (2, 2)
-┌──────────────┬────────────┐
-│ binary_label ┆ proportion │
-│ --- ┆ --- │
-│ i32 ┆ f64 │
-╞══════════════╪════════════╡
-│ 0 ┆ 0.394146 │
-│ 1 ┆ 0.605854 │
-└──────────────┴────────────┘
+![nulls](images/nulls.png)
 
+In there were some null values. There was no choice of clearning strategy since we did not use them for the training.
+Utilizing these could be a future direction.
+
+![distribution of scores](images/dist_scores.png)
+
+Using metadata is also tricky, for example authors mostly appear once or twice, although there are some clear outlines - which could bring some signal.
+![distribution of author post counts](images/auth_count_dist.png)
+
+## Text-only models
+
+For our initial experiments we have only used one column of the dataset `clean_title`. It consists of cleaned post titles as described previously.
+
+### Baseline model
+
+We have started by a simple model using combination of `Tf-Idf` embdedings and a logistic regression model. It is based on uni and bigrams.
+
+#### Binary case
+
+First we've wanted to see performance on 2-way labels to gain better intuition on how the preditions are made:
+
+Test set results:
 ROC AUC (Binary): 0.9085
 
               precision    recall  f1-score   support
@@ -87,235 +113,153 @@ ROC AUC (Binary): 0.9085
 
     accuracy                         0.8311    135870
 
-macro avg 0.8228 0.8326 0.8261 135870
-weighted avg 0.8366 0.8311 0.8323 135870
+| rank | True     | Fake              |
+| ---- | -------- | ----------------- |
+| 1    | says     | cutouts           |
+| 2    | in       | circa             |
+| 3    | police   | other discussions |
+| 4    | donates  | discussions       |
+| 5    | sign     | mrw               |
+| 6    | lets you | colourized        |
+| 7    | saves    | til               |
+| 8    | way the  | florida man       |
+| 9    | tells    | colorised         |
+| 10   | these    | poster            |
 
-Top terms driving the binary predictions:
-Words (True) Weight (True) Words (Fake) Weight (Fake)
-Rank 1 says -7.938820 cutouts 12.210975
-Rank 2 in -5.909153 circa 11.404288
-Rank 3 police -5.793592 other discussions 9.430466
-Rank 4 donates -5.554026 discussions 9.185211
-Rank 5 sign -5.536510 mrw 8.778896
-Rank 6 lets you -5.412850 colourized 7.391597
-Rank 7 saves -5.373200 til 7.029614
-Rank 8 way the -5.190966 florida man 6.314341
-Rank 9 tells -5.183665 colorised 5.634219
-Rank 10 these -5.029342 poster 5.588628
+![alt text](images/2confusion_matrix_binary_baseline.png)
 
-![alt text](pictures_eksploracja_projekt/2confusion_matrix_binary_baseline.png)
+We see that model is biased towards the most common label (False).
 
-Train label distribution:
-shape: (6, 2)
-┌─────────────┬────────────┐
-│ 6_way_label ┆ proportion │
-│ --- ┆ --- │
-│ i64 ┆ f64 │
-╞═════════════╪════════════╡
-│ 3 ┆ 0.020967 │
-│ 4 ┆ 0.296979 │
-│ 5 ┆ 0.038294 │
-│ 1 ┆ 0.059016 │
-│ 2 ┆ 0.190598 │
-│ 0 ┆ 0.394146 │
-└─────────────┴────────────┘
-roc_auc=0.9003499705575603
-precision recall f1-score support
+We get an interesting overview by the ranking of words that are the most impactful for the predictions.
 
-           0     0.8341    0.6528    0.7324     53553
-           1     0.3039    0.5781    0.3984      8019
-           2     0.6211    0.6013    0.6110     25896
-           3     0.1721    0.5865    0.2661      2849
-           4     0.7853    0.6967    0.7384     40350
-           5     0.4854    0.7578    0.5918      5203
+To get more context we took a look at the most common words for each subreddit then:
 
-    accuracy                         0.6542    135870
+![word distrubtion](images/common_words.png)
 
-macro avg 0.5336 0.6455 0.5563 135870
-weighted avg 0.7205 0.6542 0.6762 135870
+Especially for the fake case we may see:
 
-Top terms driving the predictions for each class:
-True Satire / parody False connection Imposter content Manipulated Misleading
-Rank 1 says questions with circa mrw cutouts poster
-Rank 2 this blog colourized til other discussions ussr
-Rank 3 donates must see bc fwd discussions posters
-Rank 4 jumping patriothole colorised florida man had to usa
-Rank 5 uplifting news bce hmb obligatory soviet
-Rank 6 rescued selftitled pareidolia ysk photoshop leaflet
-Rank 7 lets you satire happy to montage imgur why
-Rank 8 shaped quiz decolorized discussion swap cartoon
-Rank 9 amid said what rfakehistoryporn florida woman available here wwii
-Rank 10 my life happy ama first thing date unknown
-Rank 11 these heartbreaking little guy homemade subtle modern
-Rank 12 saves ftw has seen ocx cutout pamphlet
-Rank 13 lawmaker rac donald trump oc thought of surprising
-Rank 14 helps when this prepares lpt meanwhile reveals
-Rank 15 way the titled happiest with fixed wwi
-Rank 16 sign heartwarming auschwitz hmb while now with ww
-Rank 17 yearold jurassic bark moments before in mr president reason
-Rank 18 grew announced that hiroshima beer while as requested cuba
-Rank 19 you can ep arm mr skeltal these days flyer
-Rank 20 looks like revealed that surprised skeltal obvious bolshevism
+- `circa`, `colourized`, `colorised` - words that are most probably associated with `fakehistoryporn` subreddit
+- `other`, `discussions` - words that are common in `psbattle_artwork` subreddit
 
-![alt text](pictures_eksploracja_projekt/2confusion_matrix_multiclass_baseline.png)
+Hence we may deduce that terms frequency provides information about the subreddit which contributes an indirect data leakage. Although the Tf
 
-## Wyniki dla zaawansowanych modeli - 3
+#### 6-way case
 
-![alt text](pictures_eksploracja_projekt/3minilm-really__lgbm_ad.png)
-![alt text](pictures_eksploracja_projekt/3minilm-really__logreg_ad.png)
-![alt text](pictures_eksploracja_projekt/3minilm-really__rf_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__lgbm_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__logreg_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__rf_ad.png)
+Afterwards we trained the same combination of Tf-Idf embeddings and logistic regression for the 6-way case.
+In that case Optuna has also been used for hyperparameter optimization for 20 trials.
 
-| name                    | roc_auc  | f1_macro | accuracy | precision_macro | recall_macro |
-| ----------------------- | -------- | -------- | -------- | --------------- | ------------ |
-| minilm-really\_\_lgbm   | 0.902646 | 0.565467 | 0.676536 | 0.540540        | 0.623457     |
-| paraphrase\_\_lgbm      | 0.883598 | 0.524901 | 0.638699 | 0.503018        | 0.589049     |
-| minilm-really\_\_logreg | 0.868183 | 0.479300 | 0.582314 | 0.469425        | 0.578797     |
-| paraphrase\_\_logreg    | 0.851003 | 0.442613 | 0.535188 | 0.443552        | 0.551673     |
-| minilm-really\_\_rf     | 0.873984 | 0.378978 | 0.638250 | 0.731601        | 0.364581     |
-| paraphrase\_\_rf        | 0.852571 | 0.356497 | 0.617186 | 0.700508        | 0.343049     |
+| Confusion Matrix                     | Optuna training history                  |
+| ------------------------------------ | ---------------------------------------- |
+| ![Caption 1](images/cm_baseline.png) | ![Caption 2](images/optuna_baseline.png) |
 
-## Wyniki dla Optuna - 4
+And the word rankings:
+![word rankings](images/best_words.png)
+Here we have another finding; in the `misleading` category containing `propagandaposters` subreddit, "poster", "posters" and "ussr" are the words that influence the prediction the most.
 
-The Baseline
+### Semantic Embeddings
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_baseline.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_baseline.jpg)
+Afterwards we have tried to use more general embeddings from `sentence_transformers` library. We have used two text embedding models:
 
-Test f1 macro for the best baseline model: 0.5585
+- `paraphrase-MiniLM-L3-v2`
+- `all-MiniLM-L12-v2`
+  both based on transformer architecture.
+  Their choice was based on the benchmark on `sentence_transformers` documentation.
+  ![sentence transormers](images/sentence_transformers.png)
 
-                  precision    recall  f1-score   support
+The choice was based on speed/performance trade-off.
+We've additionally decided to compare `LogisticRegression` classification head with the `LightGBM` based one.
+Afterwards we've conducted 4 additional training runs with `optuna`. Both 20 trial long.
 
-            True     0.8376    0.6629    0.7401     53554
+Below are confusion matrices for each of the approaches:
 
-Satire / parody 0.2999 0.5649 0.3918 8019
-False connection 0.6213 0.6083 0.6147 25895
-Imposter content 0.1775 0.5542 0.2689 2849
-Manipulated 0.7894 0.7057 0.7452 40350
-Misleading 0.4860 0.7525 0.5906 5203
+| paraphrase-MiniLM + LR                  | all-MiniLM + LR                                          |
+| --------------------------------------- | -------------------------------------------------------- |
+| ![Caption 1](images/cm_para_logreg.jpg) | ![Caption 2](images/4confusion_matrix_minilm_logreg.png) |
+| paraphrase-MiniLM + LightGBM            | all-MiniLM + LightGBM                                    |
+| ![Caption 3](images/cm_para_lgbmm.jpg)  | ![Caption 4](images/cm_minillm_lgbm.jpg)                 |
 
-        accuracy                         0.6606    135870
-       macro avg     0.5353    0.6414    0.5585    135870
-    weighted avg     0.7230    0.6606    0.6815    135870
+And the optuna training history (val f1 / trial graph)
 
-The paraphrase_logreg
+| paraphrase-MiniLM + LR                      | all-MiniLM + LR                                        |
+| ------------------------------------------- | ------------------------------------------------------ |
+| ![Caption 1](images/optuna_para_logreg.jpg) | ![Caption 2](images/4optuna_history_minilm_logreg.png) |
+| paraphrase-MiniLM + LightGBM                | all-MiniLM + LightGBM                                  |
+| ![Caption 3](images/optuna_milm_lgbm.jpg)   | ![Caption 4](images/optuna_milm_lgbm.jpg)              |
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_logreg.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_paraphase_logreg.jpg)
+| name              | accuracy  | macro precision | macro recall | macro f1  |
+| ----------------- | --------- | --------------- | ------------ | --------- |
+| baseline          | **0.658** | 0.534           | **0.641**    | **0.558** |
+| paraphrase_logreg | 0.536     | 0.444           | 0.551        | 0.443     |
+| paraphrase_lgbm   | 0.609     | **0.585**       | 0.585        | 0.500     |
+| minilm_logreg     | 0.582     | 0.469           | 0.579        | 0.479     |
+| minilm_lgbm       | **0.655** | 0.520           | 0.616        | 0.545     |
 
-Best validation f1 macro: 0.4403
-Best params: {'c_param': 0.48430750886409346}
-Test f1 macro for the best paraphrase_logreg model: 0.4426
-precision recall f1-score support
+The results we got using semantic embeddiings were actually worse than in the case of the baseline (in terms of Macro F1 score). Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
 
-            True     0.7774    0.5128    0.6180     53554
+## Using Vision-Language Models
 
-Satire / parody 0.2376 0.5036 0.3228 8019
-False connection 0.4699 0.4151 0.4408 25895
-Imposter content 0.1002 0.5707 0.1705 2849
-Manipulated 0.7889 0.6317 0.7016 40350
-Misleading 0.2870 0.6696 0.4018 5203
+### Gathering images
 
-        accuracy                         0.5362    135870
-       macro avg     0.4435    0.5506    0.4426    135870
-    weighted avg     0.6574    0.5362    0.5740    135870
+Along the original dataset over 110GB of image data was shared by the authors.
+This made it inpractical to work with in the cloud computing environments we depended on (kaggle and google colab).
 
-The minim_logreg
+Thus we've decided go along with fetching the images off of the internet by ourselves. We have used `image_url` column located for the each sample.
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_minilm_logreg.png)
-![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_logreg.png)
+There were two great hinderences we've encountered:
 
-Test f1 macro for the best minilm_logreg model: 0.4807
+- some images were no longer available
+- rate limiting
 
-                  precision    recall  f1-score   support
+nonetheless we've accepted that limitation and went further.
+To save on storage space we've been continuously writing to a parquet file data in shape
 
-            True     0.8030    0.5618    0.6611     53554
+```python
+{
+    id: str,
+    image: bytes,
+    clean_title: str,
+    split: str,
+    6_way_label: int,
+}
+```
 
-Satire / parody 0.2888 0.5614 0.3814 8019
-False connection 0.5092 0.4791 0.4937 25895
-Imposter content 0.1189 0.5465 0.1953 2849
-Manipulated 0.7949 0.6784 0.7320 40350
-Misleading 0.3105 0.6517 0.4206 5203
+where images were resized to 512x512 and stored as binary representation of a jpeg file.
+This has saved us tons of storage. A file containing over 260k images took around 9.7GB of storage.
 
-        accuracy                         0.5837    135870
-       macro avg     0.4709    0.5798    0.4807    135870
-    weighted avg     0.6811    0.5837    0.6148    135870
+Evnetually storing all the images in this format would be a feasible future direction of the project.
 
-The minim_lgbm (trzeba dopełnić)
+### VLM-based model
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_minilm_lgbm.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_lgbm.jpg)
+To make use of visual data we have used `Qwen3-VL-Embedding-2B` model to extract embeddings off of both modalities.
 
-Test f1 macro for the best minilm_lgbm model: 0.5449
-precision recall f1-score support
-True 0.8079 0.6638 0.7288 53554
-Satire / parody 0.3214 0.5739 0.4120 8019
-False connection 0.5673 0.5335 0.5499 25895
-Imposter content 0.1946 0.5146 0.2824 2849
-Manipulated 0.7960 0.7450 0.7696 40350
-Misleading 0.4367 0.6629 0.5265 5203
-accuracy 0.6546 135870
-macro avg 0.5206 0.6156 0.5449 135870
-weighted avg 0.7027 0.6546 0.6710 135870
+```python
+def embed_batch(clean_titles: list[str], image_bytes_list: list[bytes]) -> np.ndarray:
+    """Returns float32 array of shape [batch_size, 2048]."""
+    inputs = [
+        {"text": title or "", "image": Image.open(BytesIO(img)).convert("RGB")}
+        for title, img in zip(clean_titles, image_bytes_list)
+    ]
+    return model.encode(inputs, convert_to_numpy=True, batch_size=len(inputs))
+```
 
-The paraphrase_lgbm
+These embeddings were then fed into LightGBM classification head. We've went with LightGBM as it seemed to score much better than logistic regression-based methods from the previous trials.
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_lgbm.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_paraphase_lgbm.jpg)
+![alt text](images/5_some_hard_stuff_with_pictures.jpg)
 
-    Test f1 macro for the best paraphrase_lgbm model: 0.5003
+On the reduced dataset with `(image, clean_title)` pairs we have achieved:
 
-                      precision    recall  f1-score   support
+- accuracy: 0.816
+- macro F1: 0.764
+- macro precision: 0.815
+- macro recall: 0.739
 
-                True     0.7878    0.6185    0.6930     53554
-     Satire / parody     0.2669    0.4946    0.3467      8019
-    False connection     0.5364    0.4934    0.5140     25895
-    Imposter content     0.1505    0.5711    0.2382      2849
-         Manipulated     0.7908    0.6932    0.7388     40350
-          Misleading     0.3720    0.6416    0.4709      5203
+which is much better result than for any of the previous approaches.
+Visual data in fact did help.
 
-            accuracy                         0.6094    135870
-           macro avg     0.4841    0.5854    0.5003    135870
-        weighted avg     0.6808    0.6094    0.6340    135870
+## Future directions
 
-## Wyniki na neurosieci - 5
+Next steps that could be taken are:
 
-![alt text](pictures_eksploracja_projekt/5_some_hard_stuff_with_pictures.jpg)
-
-Opcja I
-Accuracy: 0.8579723090665475
-F1 macro: 0.7052591135901579
-ROC-AUC macro OVR: 0.9582889336835315
-precision recall f1-score support
-
-            True     0.7490    0.8390    0.7915      2298
-
-Satire / parody 0.9055 0.7462 0.8182 398
-False connection 0.6803 0.6292 0.6538 1502
-Imposter content 0.7273 0.1053 0.1839 76
-Manipulated 0.9700 0.9700 0.9700 4528
-Misleading 0.9048 0.7403 0.8143 154
-
-        accuracy                         0.8580      8956
-       macro avg     0.8228    0.6716    0.7053      8956
-    weighted avg     0.8587    0.8580    0.8550      8956
-
-Opcja II
-Accuracy: 0.816569759793733
-F1 macro: 0.7636669079566846
-ROC-AUC macro OVR: 0.9485659820049199
-precision recall f1-score support
-
-            True     0.8304    0.8602    0.8451     19277
-
-Satire / parody 0.9457 0.8883 0.9161 3410
-False connection 0.7511 0.7474 0.7493 12776
-Imposter content 0.5433 0.2040 0.2966 554
-Manipulated 0.8703 0.8070 0.8374 715
-Misleading 0.9465 0.9287 0.9375 1277
-
-        accuracy                         0.8166     38009
-       macro avg     0.8146    0.7393    0.7637     38009
-    weighted avg     0.8146    0.8166    0.8142     38009
+1. Extend parquet dataset to contain all the images
+2. Try different classification heads.
+3. Use metadata such as scores, author names.
