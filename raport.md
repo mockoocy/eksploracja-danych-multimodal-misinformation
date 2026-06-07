@@ -165,6 +165,10 @@ The choice was based on speed/performance trade-off.
 We've additionally decided to compare `LogisticRegression` classification head with the `LightGBM` based one.
 Afterwards we've conducted 4 additional training runs with `optuna`. Both 20 trial long.
 
+The overall training pipeline looked as follows:
+
+![wow this is really a pipeline!](images/pipeline_1.png)
+
 Below are confusion matrices for each of the approaches:
 
 | paraphrase-MiniLM + LR | all-MiniLM + LR |
@@ -197,6 +201,12 @@ The results we got using semantic embeddiings were actually worse than in the ca
 
 
 ## Using Vision-Language Models
+
+The pipeline for this approach consisted of two stages: data fetching and model training.
+
+![pipeline :oooo](images/pipeline_2.png)
+
+```
 
 ### Gathering images 
 
