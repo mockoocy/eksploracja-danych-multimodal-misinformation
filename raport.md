@@ -7,8 +7,10 @@ The problem of fake news dissemination is acute in modern society, directly thre
 
  Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
 
+
 ## Fakeddit dataset
 The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the amount of information that can be used for the detection of misinformation. The data consists of post titles, images associated with them and additional metadata such as creation time, number of comments, subreddit name, etc.
+The overall quality of the data was quite good, no further pre-processing was required over the one provided by the dataset authors. 
 
 The dataset consists of over 1 million posts, of which around 682k have an image associated with them. The posts come from across 22 subreddits.
 During data collection there were also additional quality assurance steps:
@@ -65,33 +67,36 @@ The dataset contains data from quite large date range. The first posts come from
 ### Splitting the data
 For the purpose of the training we have split the data using 60/20/20 stratified split. The usage of temporal split also seemed justified initially, but the labeling strategy used by the dataset author makes it so that time is not main source of bias. For example: post in the `usnews` subreddit are automatically assigned as truthful, regardless of the date.
 
-## Pipeline & Workflow
+### Provided metadata
+The dataset provides also information on:
+- author (almost 35k different values!)
+- scores (upvotes - downvotes)
+- upvote ratio
+- number of comments
+- etc
 
-### Organizacja i stadie projektu
+![nulls](images/nulls.png)
 
-### Cel i zadanie
+In there were some null values. There was no choice of clearning strategy since we did not use them for the training.
+Utilizing these could be a future direction.
 
-### Problemy i wyzwania
+![distribution of scores](images/dist_scores.png)
 
-### Hipotezy i oczekiwane wyniki
+Using metadata is also tricky, for example authors mostly appear once or twice, although there are some clear outlines - which could bring some signal.
+![distribution of author post counts](images/auth_count_dist.png)
 
-## Eksploracja i czyszczenie - 1
 
-## Wyniki dla Baseline Model - 2
 
-This will be a simple, text-only TF-IDF model based on unigrams and bigrams. Metadata and images (additional modalities in p=other words) will be ommited for this step of project advancement.
+## Text-only models
+For our initial experiments we have only used one column of the dataset `clean_title`. It consists of cleaned post titles as described previously.
 
-Class distribution (Training set - Binary):
-shape: (2, 2)
-┌──────────────┬────────────┐
-│ binary_label ┆ proportion │
-│ --- ┆ --- │
-│ i32 ┆ f64 │
-╞══════════════╪════════════╡
-│ 0 ┆ 0.394146 │
-│ 1 ┆ 0.605854 │
-└──────────────┴────────────┘
+### Baseline model
+We have started by a simple model using combination of `Tf-Idf` embdedings and a logistic regression model. It is based on uni and bigrams.
 
+#### Binary case
+First we've wanted to see performance on 2-way labels to gain better intuition on how the preditions are made:
+
+Test set results:
 ROC AUC (Binary): 0.9085
 
               precision    recall  f1-score   support
@@ -101,235 +106,153 @@ ROC AUC (Binary): 0.9085
 
     accuracy                         0.8311    135870
 
-macro avg 0.8228 0.8326 0.8261 135870
-weighted avg 0.8366 0.8311 0.8323 135870
 
-Top terms driving the binary predictions:
-Words (True) Weight (True) Words (Fake) Weight (Fake)
-Rank 1 says -7.938820 cutouts 12.210975
-Rank 2 in -5.909153 circa 11.404288
-Rank 3 police -5.793592 other discussions 9.430466
-Rank 4 donates -5.554026 discussions 9.185211
-Rank 5 sign -5.536510 mrw 8.778896
-Rank 6 lets you -5.412850 colourized 7.391597
-Rank 7 saves -5.373200 til 7.029614
-Rank 8 way the -5.190966 florida man 6.314341
-Rank 9 tells -5.183665 colorised 5.634219
-Rank 10 these -5.029342 poster 5.588628
+
+| rank | True     | Fake              |
+| ---- | -------- | ----------------- |
+| 1    | says     | cutouts           |
+| 2    | in       | circa             |
+| 3    | police   | other discussions |
+| 4    | donates  | discussions       |
+| 5    | sign     | mrw               |
+| 6    | lets you | colourized        |
+| 7    | saves    | til               |
+| 8    | way the  | florida man       |
+| 9    | tells    | colorised         |
+| 10   | these    | poster            |
+
 
 ![alt text](images/2confusion_matrix_binary_baseline.png)
 
-Train label distribution:
-shape: (6, 2)
-┌─────────────┬────────────┐
-│ 6_way_label ┆ proportion │
-│ --- ┆ --- │
-│ i64 ┆ f64 │
-╞═════════════╪════════════╡
-│ 3 ┆ 0.020967 │
-│ 4 ┆ 0.296979 │
-│ 5 ┆ 0.038294 │
-│ 1 ┆ 0.059016 │
-│ 2 ┆ 0.190598 │
-│ 0 ┆ 0.394146 │
-└─────────────┴────────────┘
-roc_auc=0.9003499705575603
-precision recall f1-score support
+We see that model is biased towards the most common label (False).
 
-           0     0.8341    0.6528    0.7324     53553
-           1     0.3039    0.5781    0.3984      8019
-           2     0.6211    0.6013    0.6110     25896
-           3     0.1721    0.5865    0.2661      2849
-           4     0.7853    0.6967    0.7384     40350
-           5     0.4854    0.7578    0.5918      5203
+We get an interesting overview by the ranking of words that are the most impactful for the predictions.
 
-    accuracy                         0.6542    135870
+To get more context we took a look at the most common words for each subreddit then:
 
-macro avg 0.5336 0.6455 0.5563 135870
-weighted avg 0.7205 0.6542 0.6762 135870
+![word distrubtion](images/common_words.png)
 
-Top terms driving the predictions for each class:
-True Satire / parody False connection Imposter content Manipulated Misleading
-Rank 1 says questions with circa mrw cutouts poster
-Rank 2 this blog colourized til other discussions ussr
-Rank 3 donates must see bc fwd discussions posters
-Rank 4 jumping patriothole colorised florida man had to usa
-Rank 5 uplifting news bce hmb obligatory soviet
-Rank 6 rescued selftitled pareidolia ysk photoshop leaflet
-Rank 7 lets you satire happy to montage imgur why
-Rank 8 shaped quiz decolorized discussion swap cartoon
-Rank 9 amid said what rfakehistoryporn florida woman available here wwii
-Rank 10 my life happy ama first thing date unknown
-Rank 11 these heartbreaking little guy homemade subtle modern
-Rank 12 saves ftw has seen ocx cutout pamphlet
-Rank 13 lawmaker rac donald trump oc thought of surprising
-Rank 14 helps when this prepares lpt meanwhile reveals
-Rank 15 way the titled happiest with fixed wwi
-Rank 16 sign heartwarming auschwitz hmb while now with ww
-Rank 17 yearold jurassic bark moments before in mr president reason
-Rank 18 grew announced that hiroshima beer while as requested cuba
-Rank 19 you can ep arm mr skeltal these days flyer
-Rank 20 looks like revealed that surprised skeltal obvious bolshevism
+Especially for the fake case we may see:
+- `circa`, `colourized`, `colorised` - words that are most probably associated with `fakehistoryporn` subreddit
+- `other`, `discussions` - words that are common in `psbattle_artwork` subreddit
 
-![alt text](images/2confusion_matrix_multiclass_baseline.png)
+Hence we may deduce that terms frequency provides information about the subreddit which contributes an indirect data leakage. Although the Tf
 
-## Wyniki dla zaawansowanych modeli - 3
+#### 6-way case
 
-![alt text](images/3minilm-really__lgbm_ad.png)
-![alt text](images/3minilm-really__logreg_ad.png)
-![alt text](images/3minilm-really__rf_ad.png)
-![alt text](images/3paraphrase__lgbm_ad.png)
-![alt text](images/3paraphrase__logreg_ad.png)
-![alt text](images/3paraphrase__rf_ad.png)
+Afterwards we trained the same combination of Tf-Idf embeddings and logistic regression for the 6-way case.
+In that case Optuna has also been used for hyperparameter optimization for 20 trials.
 
-| name                    | roc_auc  | f1_macro | accuracy | precision_macro | recall_macro |
-| ----------------------- | -------- | -------- | -------- | --------------- | ------------ |
-| minilm-really\_\_lgbm   | 0.902646 | 0.565467 | 0.676536 | 0.540540        | 0.623457     |
-| paraphrase\_\_lgbm      | 0.883598 | 0.524901 | 0.638699 | 0.503018        | 0.589049     |
-| minilm-really\_\_logreg | 0.868183 | 0.479300 | 0.582314 | 0.469425        | 0.578797     |
-| paraphrase\_\_logreg    | 0.851003 | 0.442613 | 0.535188 | 0.443552        | 0.551673     |
-| minilm-really\_\_rf     | 0.873984 | 0.378978 | 0.638250 | 0.731601        | 0.364581     |
-| paraphrase\_\_rf        | 0.852571 | 0.356497 | 0.617186 | 0.700508        | 0.343049     |
+| Confusion Matrix | Optuna training history |
+|---|---|
+| ![Caption 1](images/cm_baseline.png) | ![Caption 2](images/optuna_baseline.png) |
 
-## Wyniki dla Optuna - 4
+And the word rankings:
+![word rankings](images/best_words.png)
+Here we have another finding; in the `misleading` category containing `propagandaposters` subreddit, "poster", "posters" and "ussr" are the words that influence the prediction the most.
 
-The Baseline
 
-![alt text](images/4confusion_matrix_baseline.jpg)
-![alt text](images/4optuna_history_baseline.jpg)
+### Semantic Embeddings
 
-Test f1 macro for the best baseline model: 0.5585
+Afterwards we have tried to use more general embeddings from `sentence_transformers` library. We have used two text embedding models:
+- `paraphrase-MiniLM-L3-v2`
+- `all-MiniLM-L12-v2`
+both based on transformer architecture.
+Their choice was based on the benchmark on `sentence_transformers` documentation.
+![sentence transormers](images/sentence_transformers.png)
 
-                  precision    recall  f1-score   support
+The choice was based on speed/performance trade-off.
+We've additionally decided to compare `LogisticRegression` classification head with the `LightGBM` based one.
+Afterwards we've conducted 4 additional training runs with `optuna`. Both 20 trial long.
 
-            True     0.8376    0.6629    0.7401     53554
+Below are confusion matrices for each of the approaches:
 
-Satire / parody 0.2999 0.5649 0.3918 8019
-False connection 0.6213 0.6083 0.6147 25895
-Imposter content 0.1775 0.5542 0.2689 2849
-Manipulated 0.7894 0.7057 0.7452 40350
-Misleading 0.4860 0.7525 0.5906 5203
+| paraphrase-MiniLM + LR | all-MiniLM + LR |
+|---|---|
+| ![Caption 1](images/cm_para_logreg.jpg) | ![Caption 2](images/4confusion_matrix_minilm_logreg.png) |
+| paraphrase-MiniLM + LightGBM | all-MiniLM + LightGBM |
+| ![Caption 3](images/cm_para_lgbmm.jpg) | ![Caption 4](images/cm_minillm_lgbm.jpg) |
 
-        accuracy                         0.6606    135870
-       macro avg     0.5353    0.6414    0.5585    135870
-    weighted avg     0.7230    0.6606    0.6815    135870
 
-The paraphrase_logreg
+And the optuna training history (val f1 / trial graph)
 
-![alt text](images/4confusion_matrix_paraphase_logreg.jpg)
-![alt text](images/4optuna_history_paraphase_logreg.jpg)
+| paraphrase-MiniLM + LR | all-MiniLM + LR |
+|---|---|
+| ![Caption 1](images/optuna_para_logreg.jpg) | ![Caption 2](images/4optuna_history_minilm_logreg.png) |
+| paraphrase-MiniLM + LightGBM | all-MiniLM + LightGBM |
+| ![Caption 3](images/optuna_milm_lgbm.jpg) | ![Caption 4](images/optuna_milm_lgbm.jpg) |
 
-Best validation f1 macro: 0.4403
-Best params: {'c_param': 0.48430750886409346}
-Test f1 macro for the best paraphrase_logreg model: 0.4426
-precision recall f1-score support
 
-            True     0.7774    0.5128    0.6180     53554
 
-Satire / parody 0.2376 0.5036 0.3228 8019
-False connection 0.4699 0.4151 0.4408 25895
-Imposter content 0.1002 0.5707 0.1705 2849
-Manipulated 0.7889 0.6317 0.7016 40350
-Misleading 0.2870 0.6696 0.4018 5203
 
-        accuracy                         0.5362    135870
-       macro avg     0.4435    0.5506    0.4426    135870
-    weighted avg     0.6574    0.5362    0.5740    135870
+| name | accuracy  | macro precision | macro recall| macro f1 | 
+| ----------------------- | -------- | -------- | -------- | --------------- | 
+| baseline  | **0.658** | 0.534 | **0.641** | **0.558** |
+| paraphrase_logreg      | 0.536 | 0.444 | 0.551 | 0.443 
+| paraphrase_lgbm | 0.609 | **0.585** | 0.585 | 0.500  
+| minilm_logreg    | 0.582 | 0.469 | 0.579 | 0.479 
+| minilm_lgbm     | **0.655** | 0.520 | 0.616 | 0.545  
 
-The minim_logreg
+The results we got using semantic embeddiings were actually worse than in the case of the baseline (in terms of Macro F1 score). Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
 
-![alt text](images/4confusion_matrix_minilm_logreg.png)
-![alt text](images/4optuna_history_minilm_logreg.png)
 
-Test f1 macro for the best minilm_logreg model: 0.4807
+## Using Vision-Language Models
 
-                  precision    recall  f1-score   support
+### Gathering images 
 
-            True     0.8030    0.5618    0.6611     53554
+Along the original dataset over 110GB of image data was shared by the authors.
+This made it inpractical to work with in the cloud computing environments we depended on (kaggle and google colab).
 
-Satire / parody 0.2888 0.5614 0.3814 8019
-False connection 0.5092 0.4791 0.4937 25895
-Imposter content 0.1189 0.5465 0.1953 2849
-Manipulated 0.7949 0.6784 0.7320 40350
-Misleading 0.3105 0.6517 0.4206 5203
+Thus we've decided go along with fetching the images off of the internet by ourselves. We have used `image_url` column located for the each sample.
 
-        accuracy                         0.5837    135870
-       macro avg     0.4709    0.5798    0.4807    135870
-    weighted avg     0.6811    0.5837    0.6148    135870
+There were two great hinderences we've encountered:
+- some images were no longer available
+- rate limiting
 
-The minim_lgbm (trzeba dopełnić)
+nonetheless we've accepted that limitation and went further.
+To save on storage space we've been continuously writing to a parquet file data in shape
+```python
+{
+    id: str,
+    image: bytes,
+    clean_title: str,
+    split: str,
+    6_way_label: int,
+}
+```
+where images were resized to 512x512 and stored as binary representation of a jpeg file.
+This has saved us tons of storage. A file containing over 260k images took around 9.7GB of storage.
 
-![alt text](images/4confusion_matrix_minilm_lgbm.jpg)
-![alt text](images/4optuna_history_minilm_lgbm.jpg)
+Evnetually storing all the images in this format would be a feasible future direction of the project.
 
-Test f1 macro for the best minilm_lgbm model: 0.5449
-precision recall f1-score support
-True 0.8079 0.6638 0.7288 53554
-Satire / parody 0.3214 0.5739 0.4120 8019
-False connection 0.5673 0.5335 0.5499 25895
-Imposter content 0.1946 0.5146 0.2824 2849
-Manipulated 0.7960 0.7450 0.7696 40350
-Misleading 0.4367 0.6629 0.5265 5203
-accuracy 0.6546 135870
-macro avg 0.5206 0.6156 0.5449 135870
-weighted avg 0.7027 0.6546 0.6710 135870
+### VLM-based model
 
-The paraphrase_lgbm
-
-![alt text](images/4confusion_matrix_paraphase_lgbm.jpg)
-![alt text](images/4optuna_history_paraphase_lgbm.jpg)
-
-    Test f1 macro for the best paraphrase_lgbm model: 0.5003
-
-                      precision    recall  f1-score   support
-
-                True     0.7878    0.6185    0.6930     53554
-     Satire / parody     0.2669    0.4946    0.3467      8019
-    False connection     0.5364    0.4934    0.5140     25895
-    Imposter content     0.1505    0.5711    0.2382      2849
-         Manipulated     0.7908    0.6932    0.7388     40350
-          Misleading     0.3720    0.6416    0.4709      5203
-
-            accuracy                         0.6094    135870
-           macro avg     0.4841    0.5854    0.5003    135870
-        weighted avg     0.6808    0.6094    0.6340    135870
-
-## Wyniki na neurosieci - 5
+To make use of visual data we have used `Qwen3-VL-Embedding-2B` model to extract embeddings off of both modalities.
+```python
+def embed_batch(clean_titles: list[str], image_bytes_list: list[bytes]) -> np.ndarray:
+    """Returns float32 array of shape [batch_size, 2048]."""
+    inputs = [
+        {"text": title or "", "image": Image.open(BytesIO(img)).convert("RGB")}
+        for title, img in zip(clean_titles, image_bytes_list)
+    ]
+    return model.encode(inputs, convert_to_numpy=True, batch_size=len(inputs))
+``` 
+These embeddings were then fed into LightGBM classification head. We've went with LightGBM as it seemed to score much better than logistic regression-based methods from the previous trials.
 
 ![alt text](images/5_some_hard_stuff_with_pictures.jpg)
 
-Opcja I
-Accuracy: 0.8579723090665475
-F1 macro: 0.7052591135901579
-ROC-AUC macro OVR: 0.9582889336835315
-precision recall f1-score support
+On the reduced dataset with `(image, clean_title)` pairs we have achieved:
+- accuracy: 0.816
+- macro F1: 0.764
+- macro precision: 0.815
+- macro recall: 0.739
 
-            True     0.7490    0.8390    0.7915      2298
+which is much better result than for any of the previous approaches.
+Visual data in fact did help.
 
-Satire / parody 0.9055 0.7462 0.8182 398
-False connection 0.6803 0.6292 0.6538 1502
-Imposter content 0.7273 0.1053 0.1839 76
-Manipulated 0.9700 0.9700 0.9700 4528
-Misleading 0.9048 0.7403 0.8143 154
+## Future directions
 
-        accuracy                         0.8580      8956
-       macro avg     0.8228    0.6716    0.7053      8956
-    weighted avg     0.8587    0.8580    0.8550      8956
-
-Opcja II
-Accuracy: 0.816569759793733
-F1 macro: 0.7636669079566846
-ROC-AUC macro OVR: 0.9485659820049199
-precision recall f1-score support
-
-            True     0.8304    0.8602    0.8451     19277
-
-Satire / parody 0.9457 0.8883 0.9161 3410
-False connection 0.7511 0.7474 0.7493 12776
-Imposter content 0.5433 0.2040 0.2966 554
-Manipulated 0.8703 0.8070 0.8374 715
-Misleading 0.9465 0.9287 0.9375 1277
-
-        accuracy                         0.8166     38009
-       macro avg     0.8146    0.7393    0.7637     38009
-    weighted avg     0.8146    0.8166    0.8142     38009
+Next steps that could be taken are:
+1. Extend parquet dataset to contain all the images
+2. Try different classification heads.
+3. Use metadata such as scores, author names.
