@@ -1,18 +1,69 @@
-## Wprowadzenie i podstawy teoretyczne
+# Introduction 
 
-The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
+## Motivation behind misinformation classification.
 
-The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the feature space for detecting fakes. The presence of text-image pairs opens up enormous prospects for implicit fact-checking tasks, where one modality serves as an evidence base for verifying the other. An algorithm can use the visual details of a photograph as strict proof of the truthfulness or falsity of a written headline, and conversely, analyse the text to confirm the authenticity of the attached picture, thereby identifying subtle discrepancies between the stated meaning and the actual visual content.
+The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. People of today frequently access 
 
-Fakeddit represents an unprecedentedly large dataset, containing more than one million (1,063,106) unique samples of news and posts collected from the Reddit platform via the pushshift.io API. This dataset covers almost a decade, starting from 2008, which allows machine learning algorithms not only to capture short-term trends but also to adapt deeply to the evolution of cultural-linguistic patterns and changes in the news agenda. More than 300,000 unique users from 22 different thematic communities (subreddits) contributed to the formation of the database, ensuring an incredible diversity of perspectives, writing styles, and topics covered — from political analysis to everyday observations. The authors meticulously extracted not only the headlines and attached images but also rich metadata, including scores, author names, and audience comments. Moreover, about 64% of the entire final dataset consists of fully multimodal samples containing both textual and graphical components.
 
-The high quality and reliability of the collected dataset were ensured through a strict multi-level filtering system that completely eliminated the need to manually sort each of the million items. At the first stage, primary cleaning occurred naturally through the moderators of the subreddits themselves, who promptly remove any posts that violate platform rules or do not fit the community's theme. At the second stage, the authors harnessed the collective intelligence of Reddit’s thousands of users, excluding from the dataset absolutely all posts with a user rating below one, reasonably assuming that such low scores reliably mark irrelevant or outright low-quality content. Finally, for final confirmation of the reliability of the selected sources, the researchers conducted a control manual check, randomly examining ten posts from each community. They excluded those sources whose content deviated from the stated topic, leaving only the 22 cleanest and most relevant subreddits for the final database.
+ Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
 
-Labeling the vast amount of data was performed using the distant supervision method — an approach that involves automatically assigning labels to all posts based on the known general theme of the subreddit from which they were extracted. This eliminates the need to manually label each individual post. Depending on the task, the dataset supports three levels of classification nesting: binary (basic division into truth and fake), ternary (where fakes are further divided into completely false and those where the text itself is truthful, such as direct quotations from propaganda posters), and the deepest six-level classification. This detailed classification presents six labels. The True label covers reliable content that fully corresponds to actual facts. Satire/Parody includes posts that present truthful current information in a satirical or parodic manner, which formally makes them false in a literal reading. Misleading Content describes information that has been intentionally distorted to manipulate and deceive the audience. False Connection marks cases where the attached image completely does not match the textual description, creating a false visual context. Manipulated Content refers to artificially fabricated or edited photographs. The sixth label is Imposter Content — content generated by specially trained bots that plausibly mimic the behaviour of real people on the platform in order to intentionally sow chaos in the information environment and confuse algorithms. It is important to note that some of these categories, in particular Manipulated Content, consist almost entirely of visually altered pictures, so when creating narrowly focused models that analyse only textual data, it is advisable to disregard such labels so as not to introduce unnecessary mathematical noise into the training sample.
+## Fakeddit dataset
+The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the amount of information that can be used for the detection of misinformation. The data consists of post titles, images associated with them and additional metadata such as creation time, number of comments, subreddit name, etc.
 
-During extensive experiments aimed at testing the effectiveness of the collected data, the dataset authors preliminarily filtered out all incomplete samples lacking text or images to ensure the purity of comparison across different modalities. To extract deep semantic features from texts, the researchers used the InferSent model, which has proven itself as a generator of universal sentence embeddings, as well as the advanced BERT architecture, which shows outstanding results in natural language understanding. For parallel processing of visual information, powerful computer vision neural networks such as VGG16, ResNet50, and the more modern EfficientNet were employed. The training process for hybrid models was based on the use of dense layers, where the extracted vectors of text and images were combined using various mathematical methods — addition, concatenation, maximum computation, and averaging — after which the resulting tensor was passed to a final softmax classifier. The results of these comprehensive tests unequivocally demonstrated the superiority of the multimodal approach: algorithms that analysed text and images together consistently outperformed models trained on only one modality. The absolute winner among all configurations was the combination of the BERT text embedder and the ResNet50 visual network, combined via the maximum computation method, confirming the critical importance of merging contexts for fake news recognition.
+The dataset consists of over 1 million posts, of which around 682k have an image associated with them. The posts come from across 22 subreddits.
+During data collection there were also additional quality assurance steps:
+- removing all posts with score < 1,
+- subreddit-specific title tags were removed. 
 
-The in-depth error analysis conducted by the researchers revealed a number of very interesting patterns and vulnerabilities of modern classification algorithms. It turned out that the most difficult category for baseline networks to recognise was Imposter Content. This is quite logical: the modern generative algorithms underlying such bots so skilfully mimic human speech and communication style that they create hyper-realistic texts, almost indistinguishable from posts by real users. The second most difficult category for the models was Satire/Parody, because the creators of satirical posts deliberately and very accurately copy the formal style of real mass media. For an algorithm to successfully detect satire, it is not enough to simply analyse syntax or word sentiment — it requires deep contextual knowledge of how the real world works, which baseline models do not yet possess to a sufficient degree. At the same time, the authors were pleasantly surprised by the fact that the final multimodal neural network was able to handle the Manipulated Content category almost flawlessly, easily detecting traces of editing and photoshopping in images. Furthermore, the analysis showed that in ambiguous situations, the model often tended to erroneously assign the True label simply because in the detailed classification this category remains the most numerous, creating a natural class imbalance in the training sample.
+### Post labels
+ For each sample there are three different labels assigned, corresponding to different levels of granuality:
+- 2-way labels: a `True/False` split - represents whether or not the posts presents factual information
+![alt text](images/2_way_label.png)
+- 3-way labels: posts containing false data have been split into two categories:
+  - false text, false sample - sample has `False` label in 2-way labeling and contains untrue information
+  - true text, fale sample - sample has been deemed `False`, but contains "true" text - it involves only posts containing propaganda posters.
+![alt text](images/3_way_label.png)
+- 6-way labels: `True` label remains the same as in the other two kinds of labeling, the `False` label has been split into:
+  - imposter content; i.e. content auto-generated by bots
+  - misleading content: content conveyed in a manipulated way to mislead people in believing false narratives
+  - satire / parody
+  - false connection: submission images in this category do not accurately support their text descriptions
+  - manipulated content: content that has been manually altered e.g. via image modifications
+![alt text](images/6_way_label.png)
+
+### The labeling process
+
+In context of Fakeddit dataset it is very important to point out how the labels were assigned. For each subreddit the authors of the dataset chose they've inspected 10 random samples. If the 6-way label they assigned for each of the sample matched - then the subreddit was kept in the dataset and the label was assigned to each post in the subreddit.
+![alt text](images/flawed_labeling.png)
+
+This labeling process makes it so that misinformation classification tasks devolves into task of predicting the subreddit from the title.
+An interesting assignment is "manipulated" for `psbattle_artwork` subreddit - since it consists of posts that rely on image manipulation - albeit it's use seems rather satirical.
+
+### Examples
+
+![alt text](images/huge_cat.png)
+
+Above is a picture of a cat titled "he looks huge". This post comes from `confusing_perspective` subreddit - thus it's labeled as false connection.
+
+![godzilla](images/godzilla.jpg.jpeg)
+
+The above post is titled "Obligatory godzilla post" and comes from `psbattle_artwork` subreddit.
+
+![propangaposter](images/propagandaposter.webp)
+
+Cleaned title: "newspaper illustration depicting japan shooting china with the bullet of civilization first sinojapanese war"
+
+![propaganda2](images/propangda2.webp)
+
+Another propaganda poster "roosevelt figured wrong the tentacles of the dollaroctopus will be cut the jews in the white house and the gold in fort knox have been surrounded by young people by the armies of labor nsb poster from the netherlands"
+
+### Temporal resolution
+The dataset contains data from quite large date range. The first posts come from 2008, while the last ones from 2019.
+
+![temp](images/temporal_res.png)
+
+### Splitting the data
+For the purpose of the training we have split the data using 60/20/20 stratified split. The usage of temporal split also seemed justified initially, but the labeling strategy used by the dataset author makes it so that time is not main source of bias. For example: post in the `usnews` subreddit are automatically assigned as truthful, regardless of the date.
 
 ## Pipeline & Workflow
 
@@ -66,7 +117,7 @@ Rank 8 way the -5.190966 florida man 6.314341
 Rank 9 tells -5.183665 colorised 5.634219
 Rank 10 these -5.029342 poster 5.588628
 
-![alt text](pictures_eksploracja_projekt/2confusion_matrix_binary_baseline.png)
+![alt text](images/2confusion_matrix_binary_baseline.png)
 
 Train label distribution:
 shape: (6, 2)
@@ -120,16 +171,16 @@ Rank 18 grew announced that hiroshima beer while as requested cuba
 Rank 19 you can ep arm mr skeltal these days flyer
 Rank 20 looks like revealed that surprised skeltal obvious bolshevism
 
-![alt text](pictures_eksploracja_projekt/2confusion_matrix_multiclass_baseline.png)
+![alt text](images/2confusion_matrix_multiclass_baseline.png)
 
 ## Wyniki dla zaawansowanych modeli - 3
 
-![alt text](pictures_eksploracja_projekt/3minilm-really__lgbm_ad.png)
-![alt text](pictures_eksploracja_projekt/3minilm-really__logreg_ad.png)
-![alt text](pictures_eksploracja_projekt/3minilm-really__rf_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__lgbm_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__logreg_ad.png)
-![alt text](pictures_eksploracja_projekt/3paraphrase__rf_ad.png)
+![alt text](images/3minilm-really__lgbm_ad.png)
+![alt text](images/3minilm-really__logreg_ad.png)
+![alt text](images/3minilm-really__rf_ad.png)
+![alt text](images/3paraphrase__lgbm_ad.png)
+![alt text](images/3paraphrase__logreg_ad.png)
+![alt text](images/3paraphrase__rf_ad.png)
 
 | name                    | roc_auc  | f1_macro | accuracy | precision_macro | recall_macro |
 | ----------------------- | -------- | -------- | -------- | --------------- | ------------ |
@@ -144,8 +195,8 @@ Rank 20 looks like revealed that surprised skeltal obvious bolshevism
 
 The Baseline
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_baseline.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_baseline.jpg)
+![alt text](images/4confusion_matrix_baseline.jpg)
+![alt text](images/4optuna_history_baseline.jpg)
 
 Test f1 macro for the best baseline model: 0.5585
 
@@ -165,8 +216,8 @@ Misleading 0.4860 0.7525 0.5906 5203
 
 The paraphrase_logreg
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_logreg.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_paraphase_logreg.jpg)
+![alt text](images/4confusion_matrix_paraphase_logreg.jpg)
+![alt text](images/4optuna_history_paraphase_logreg.jpg)
 
 Best validation f1 macro: 0.4403
 Best params: {'c_param': 0.48430750886409346}
@@ -187,8 +238,8 @@ Misleading 0.2870 0.6696 0.4018 5203
 
 The minim_logreg
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_minilm_logreg.png)
-![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_logreg.png)
+![alt text](images/4confusion_matrix_minilm_logreg.png)
+![alt text](images/4optuna_history_minilm_logreg.png)
 
 Test f1 macro for the best minilm_logreg model: 0.4807
 
@@ -208,8 +259,8 @@ Misleading 0.3105 0.6517 0.4206 5203
 
 The minim_lgbm (trzeba dopełnić)
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_minilm_lgbm.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_minilm_lgbm.jpg)
+![alt text](images/4confusion_matrix_minilm_lgbm.jpg)
+![alt text](images/4optuna_history_minilm_lgbm.jpg)
 
 Test f1 macro for the best minilm_lgbm model: 0.5449
 precision recall f1-score support
@@ -225,8 +276,8 @@ weighted avg 0.7027 0.6546 0.6710 135870
 
 The paraphrase_lgbm
 
-![alt text](pictures_eksploracja_projekt/4confusion_matrix_paraphase_lgbm.jpg)
-![alt text](pictures_eksploracja_projekt/4optuna_history_paraphase_lgbm.jpg)
+![alt text](images/4confusion_matrix_paraphase_lgbm.jpg)
+![alt text](images/4optuna_history_paraphase_lgbm.jpg)
 
     Test f1 macro for the best paraphrase_lgbm model: 0.5003
 
@@ -245,7 +296,7 @@ The paraphrase_lgbm
 
 ## Wyniki na neurosieci - 5
 
-![alt text](pictures_eksploracja_projekt/5_some_hard_stuff_with_pictures.jpg)
+![alt text](images/5_some_hard_stuff_with_pictures.jpg)
 
 Opcja I
 Accuracy: 0.8579723090665475
