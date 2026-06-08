@@ -1,5 +1,7 @@
 # Report of Fakeddit Data Analysis
 
+Ivan Polishchuk and Paweł Moćko
+
 ## Introduction
 
 ### Motivation behind misinformation classification.
