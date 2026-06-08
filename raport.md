@@ -142,7 +142,7 @@ First, we evaluated the model's performance on 2-way labels (truth versus falseh
 
 ![alt text](images/2confusion_matrix_binary_baseline.png)
 
-Table: Classification metrics
+#### Table: Classification metrics
 
 | Class    | Precision | Recall | F1-score | Support |
 | -------- | --------- | ------ | -------- | ------- |
@@ -150,7 +150,7 @@ Table: Classification metrics
 | Fake (1) | 0.8878    | 0.8255 | 0.8555   | 82317   |
 | Accuracy |           |        | 0.8311   | 135870  |
 
-Table : Top‑10 words/phrases for True and Fake classes
+#### Table: Top‑10 words/phrases for True and Fake classes
 
 | Rank                     | True             | Fake                 |
 | ------------------------ | ---------------- | -------------------- |
@@ -241,9 +241,9 @@ Below are confusion matrices for each of the approaches:
 #### Table: Optuna. Training History
 
 |                                  paraphrase-MiniLM-L3-v2                                  |                                    all-MiniLM-L12-v2                                     |
-| :---------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------: | --- |
+| :---------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------: |
 | **Logistic Regression**<br>![Optuna Para LR](images/4optuna_history_paraphase_logreg.jpg) | **Logistic Regression**<br>![Optuna MiniLM LR](images/4optuna_history_minilm_logreg.png) |
-|      **LightGBM**<br>![Optuna Para LGBM](images/4optuna_history_paraphase_lgbm.jpg)       |      **LightGBM**<br>![Optuna MiniLM LGBM](images/4optuna_history_minilm_lgbm.jpg)       |     |
+|      **LightGBM**<br>![Optuna Para LGBM](images/4optuna_history_paraphase_lgbm.jpg)       |      **LightGBM**<br>![Optuna MiniLM LGBM](images/4optuna_history_minilm_lgbm.jpg)       |
 
 The optimization history plots demonstrate that Optuna successfully narrowed the search spaces, discarding ineffective hyperparameter combinations and reaching mathematical optimums. Interestingly, after strict hyperparameter tuning, the optimized TF-IDF Baseline slightly overtook the tuned minilm_lgbm in F1-macro (0.5585 vs 0.5449). When comparing the confusion matrices of all tuned models, a consistent pattern emerges: absolutely all classifiers struggle to separate classes that have semantic overlap with truthful news. We observe a significant concentration of false negatives in the True category, indicating that models choose the path of least resistance under conditions of uncertainty.
 
@@ -330,7 +330,7 @@ This test showed slightly lower overall accuracy, the Macro F1 score noticeably 
 
 Comparing these outcomes with the metrics achieved during the text-only stage reveals a massive qualitative leap. Previously, the best text-only semantic embedders hovered around a Macro F1 range of 0.50–0.56. The current multimodal experiment elevated this indicator to 0.70–0.76. This statistically significant increase confirms our initial hypothesis: incorporating the visual modality radically expands the classifier's capabilities.
 
-The confusion matrices for the multimodal models have become significantly more "diagonal", verifying the concentration of correct predictions along the main axis. The severe confusion that plagued text-only models—particularly the inability to distinguish True news from False Connection—has been substantially mitigated. The algorithm now confidently relies on concrete visual evidence rather than purely on statistical lexical patterns or internet slang. The consistently high ROC-AUC values (above 0.94) further confirm the model's excellent capacity to rank objects mathematically.
+The confusion matrices for the multimodal models have become significantly more "diagonal", verifying the concentration of correct predictions along the main axis. The severe confusion that plagued text-only models (particularly the inability to distinguish True news from False Connection has been substantially mitigated). The algorithm now confidently relies on concrete visual evidence rather than purely on statistical lexical patterns or internet slang. The consistently high ROC-AUC values (above 0.94) further confirm the model's excellent capacity to rank objects mathematically.
 
 ## Implications and Future Directions
 
