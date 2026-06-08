@@ -266,3 +266,9 @@ Next steps that could be taken are:
 1. Extend parquet dataset to contain all the images
 2. Try different classification heads.
 3. Use metadata such as scores, author names.
+
+## Summary
+
+We have tested machine learning of increasing complexity to tackle the task of multimodal misinformation classification. We have stumbled open probles related to the data collection process itself, but we have succesfully indendified them and thought about how they relate to our findings.
+Additionally we had our own share of technical challenges with regards to fetching lots of images from the internet, which we had adressed by using recommended techniques of handling large data volumes.
+Finally we have proven the superiority of using multiple modalities over sticking to text only. 
