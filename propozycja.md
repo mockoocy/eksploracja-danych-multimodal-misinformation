@@ -45,15 +45,6 @@ A key discovery during the EDA stage was the visualisation of the distribution o
 
 The final chord of the first stage was deep data cleaning. We applied an exact duplicate search method, grouping the array by the unique combination of cleaned title (clean_title) and image URL (image_url), keeping only the first unique occurrence. This solution eliminated information noise and prevented models from overfitting on repeated posts, significantly increasing the fairness of future metrics on the test set. Additionally, analysis of the missing value matrix revealed more than 201,000 gaps in the comment and score columns. Further investigation showed that the vast majority of these anomalies are strongly correlated with the subreddit psbattle_artwork, which is currently removed from the Reddit platform. Our decision to completely delete all rows associated with this inactive community allowed us both to get rid of a huge array of null values and to cleanse the dataset of content whose primary veracity can no longer be independently verified.
 
-![alt text](pictures_eksploracja_projekt/1distribution_2way_labels.png)
-2-way labels
-
-![alt text](pictures_eksploracja_projekt/1distribution_3way_labels.png)
-3-way labels
-
-![alt text](pictures_eksploracja_projekt/1distribution_6way_labels.png)
-6-way labels
-
 ![alt text](pictures_eksploracja_projekt/1distribution_cleaned_title_counts.png)
 Distribution of words in titles
 
