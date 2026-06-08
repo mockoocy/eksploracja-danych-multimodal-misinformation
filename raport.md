@@ -130,59 +130,61 @@ For the purpose of training, we split the data using a 60/20/20 stratified split
 
 ## Step II. The Power and Unitily of Just-Text Models
 
-For our initial experiments we have only used one column of the dataset `clean_title`. It consists of cleaned post titles as described previously.
+For our initial experiments, we exclusively used the clean_title column. After the theoretical justification and preparation of a clean data sample, we move to the practical stage of building and evaluating our text-based classifiers.
 
-### Baseline model
+### Baseline Model: TF-IDF & Logistic Regression
 
-We have started by a simple model using combination of `Tf-Idf` embdedings and a logistic regression model. It is based on uni and bigrams.
+Creating a baseline model is a necessary first step; its metrics form the benchmark we will attempt to surpass using more complex architectures. Our pipeline combines a TF-IDF vectorizer (searching for uni- and bigrams with a limit of 30,000 features) and a Logistic Regression model with balanced class weights.
 
-#### Binary case
+#### The Binary Case
 
-First we've wanted to see performance on 2-way labels to gain better intuition on how the preditions are made:
-
-ROC AUC (Binary): 0.9085
-
-              precision    recall  f1-score   support
-
-    True (0)     0.7579    0.8396    0.7967     53553
-    Fake (1)     0.8878    0.8255    0.8555     82317
-
-    accuracy                         0.8311    135870
-
-| rank | True     | Fake              |
-| ---- | -------- | ----------------- |
-| 1    | says     | cutouts           |
-| 2    | in       | circa             |
-| 3    | police   | other discussions |
-| 4    | donates  | discussions       |
-| 5    | sign     | mrw               |
-| 6    | lets you | colourized        |
-| 7    | saves    | til               |
-| 8    | way the  | florida man       |
-| 9    | tells    | colorised         |
-| 10   | these    | poster            |
+First, we evaluated the model's performance on 2-way labels (truth versus falsehood) to gain a better intuition of how predictions are made. The algorithm has the potential to confidently separate the classes. To understand the internal logic of this binary classifier, we extracted the top 10 words with the highest predictive weights for each category:
 
 ![alt text](images/2confusion_matrix_binary_baseline.png)
+
+Table: Classification metrics
+
+| Class    | Precision | Recall | F1-score | Support |
+| -------- | --------- | ------ | -------- | ------- |
+| True (0) | 0.7579    | 0.8396 | 0.7967   | 53553   |
+| Fake (1) | 0.8878    | 0.8255 | 0.8555   | 82317   |
+| Accuracy |           |        | 0.8311   | 135870  |
+
+Table : Top‑10 words/phrases for True and Fake classes
+
+| Rank                     | True             | Fake                 |
+| ------------------------ | ---------------- | -------------------- |
+| 1                        | says             | cutouts              |
+| 2                        | in               | circa                |
+| 3                        | police           | other discussions    |
+| 4                        | donates          | discussions          |
+| 5                        | sign             | mrw                  |
+| 6                        | lets you         | colourized           |
+| 7                        | saves            | til                  |
+| 8                        | way the          | florida man          |
+| 9                        | tells            | colorised            |
+| 10                       | these            | poster               |
+| ROC AUC (Binary): 0.9085 | Accuracy: 0.8311 | Macro Avg F1: 0.8261 |
 
 We see that model is biased towards the most common label (False). We get an interesting overview by the ranking of words that are the most impactful for the predictions. To get more context we took a look at the most common words for each subreddit then:
 
 ![word distrubtion](images/common_words.png)
 
-Especially for the fake case we may see:
-
-- `circa`, `colourized`, `colorised` - words that are most probably associated with `fakehistoryporn` subreddit
-- `other`, `discussions` - words that are common in `psbattle_artwork` subreddit
-
-Hence we may deduce that terms frequency provides information about the subreddit which contributes an indirect data leakage. Although the Tf
+For truthful posts, the algorithm highlights markers typical of a dry news style (says, police, donates). In contrast, fake content is dominated by specific internet slang (mrw, til) and technical tags (cutouts, colourized). It is characteristic that the model relies not so much on the deep semantics of deception, but on explicit artifacts of the Reddit environment. Terms like circa or colorised heavily imply the fakehistoryporn subreddit, while cutouts points to psbattle_artwork. This confirms that term frequency provides indirect information about the subreddit, contributing to a form of data leakage.
 
 #### 6-way case
 
-Afterwards we trained the same combination of Tf-Idf embeddings and logistic regression for the 6-way case.
+We applied exactly the same sequence of actions to build the 6-class model. As expected, when moving to a finer classification, the absolute metric values noticeably decreased, though the probabilistic ROC-AUC metric remained at a stable, high level (0.9003).
+
+The confusion matrix clearly demonstrates the reason for the drop in accuracy. While the True and Manipulated classes are predicted quite confidently, strong confusion arises among the remaining categories. The algorithm makes massive errors when distinguishing satire, imposter content, and misleading posts, often unfairly classifying them as truthful news. Logistic regression with TF-IDF works as a qualitative keyword filter, but it is incapable of understanding irony or contextual mismatches. The binary model is unconditionally superior in raw metrics, but it is too simplistic for real-world information analysis. The 6-class model represents a much more profound categorisation. Consequently, the performance of the 6-class baseline model establishes the main benchmark for our project.
+
 In that case Optuna has also been used for hyperparameter optimization for 20 trials.
 
-| Confusion Matrix                     | Optuna training history                  |
-| ------------------------------------ | ---------------------------------------- |
-| ![Caption 1](images/cm_baseline.png) | ![Caption 2](images/optuna_baseline.png) |
+#### Table. The Baseline Model (already tunned by Optuna)
+
+| Confusion Matrix                                    | Optuna training history                  |
+| --------------------------------------------------- | ---------------------------------------- |
+| ![Caption 1](images/4confusion_matrix_baseline.jpg) | ![Caption 2](images/optuna_baseline.png) |
 
 And the word rankings:
 ![word rankings](images/best_words.png)
@@ -190,33 +192,62 @@ Here we have another finding; in the `misleading` category containing `propagand
 
 ### Semantic Embeddings
 
-Afterwards we have tried to use more general embeddings from `sentence_transformers` library. We have used two text embedding models:
+After creating the baseline model based on frequency analysis, we moved to the stage of extracting deep semantic meaning. To test whether modern neural network NLP technologies can recognize hidden manipulations better than keyword-based search algorithms, we introduced dense vector representations.
 
-- `paraphrase-MiniLM-L3-v2`
-- `all-MiniLM-L12-v2`
-  both based on transformer architecture.
-  Their choice was based on the benchmark on `sentence_transformers` documentation.
-  ![sentence transormers](images/sentence_transformers.png)
+We selected two compact but powerful language transformers from the sentence_transformers library:
 
-The choice was based on speed/performance trade-off.
-We've additionally decided to compare `LogisticRegression` classification head with the `LightGBM` based one.
-Afterwards we've conducted 4 additional training runs with `optuna`. Both 20 trial long.
+- all-MiniLM-L12-v2 (a universal model)
+
+- paraphrase-MiniLM-L3-v2 (specialized in paraphrasing)
+
+![sentence transormers](images/sentence_transformers.png)
+
+The choice was based on speed/performance trade-off. To isolate the influence of the embedder from the classification method, each was tested with default parameters across three algorithms: Logistic Regression (LR), Random Forest (RF), and LightGBM (LGBM).
+
+#### Table: Model performance comparison
+
+| Model                   | ROC AUC | F1 macro | Accuracy | Precision macro | Recall macro |
+| ----------------------- | ------- | -------- | -------- | --------------- | ------------ |
+| minilm-really\_\_lgbm   | 0.9026  | 0.5655   | 0.6765   | 0.5405          | 0.6235       |
+| paraphrase\_\_lgbm      | 0.8836  | 0.5249   | 0.6387   | 0.5030          | 0.5890       |
+| minilm-really\_\_logreg | 0.8682  | 0.4793   | 0.5823   | 0.4694          | 0.5788       |
+| paraphrase\_\_logreg    | 0.8510  | 0.4426   | 0.5352   | 0.4436          | 0.5517       |
+| minilm-really\_\_rf     | 0.8740  | 0.3790   | 0.6383   | 0.7316          | 0.3646       |
+| paraphrase\_\_rf        | 0.8526  | 0.3565   | 0.6172   | 0.7005          | 0.3430       |
+
+|                                 all-MiniLM-L12-v2                                 |                           paraphrase-MiniLM-L3-v2                            |
+| :-------------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+|        **LightGBM**<br>![MiniLM LGBM](images/3minilm-really__lgbm_ad.png)         |        **LightGBM**<br>![Para LGBM](images/3paraphrase__lgbm_ad.png)         |
+| **Logistic Regression**<br>![MiniLM LogReg](images/3minilm-really__logreg_ad.png) | **Logistic Regression**<br>![Para LogReg](images/3paraphrase__logreg_ad.png) |
+|        **Random Forest**<br>![MiniLM RF](images/3minilm-really__rf_ad.png)        |        **Random Forest**<br>![Para RF](images/3paraphrase__rf_ad.png)        |
+
+The absolute leader of this stage was the minilm-really\_\_lgbm combination, which achieved an F1-macro of 0.5655, successfully beating our 6-way TF-IDF baseline.
+
+Linear algorithms (LogReg) on dense vectors performed noticeably weaker than boosting, failing to separate non-linear semantic boundaries. The most paradoxical results came from the Random Forest algorithm: despite a good overall accuracy, its F1-macro catastrophically collapsed (0.35 - 0.37). A glance at the RF confusion matrices explains why: the algorithm completely capitulated to the dataset imbalance, aggressively predicting majority classes while outputting near zeros for satire and imposter content. Gradient boosting (LightGBM) indisputably proved its architectural superiority. Furthermore, the universal all-MiniLM-L12-v2 model consistently outperformed the paraphrase-specific model, suggesting that general semantic knowledge is more adaptable to Reddit's structure.
+
+### Hyperparameter Tuning with Optuna
+
+Afterwards, we've conducted 4 additional training runs with Optuna, both 20 trial long. For the objective function, we strictly utilized the F1-macro metric. We deliberately avoided using Accuracy or F1-weighted because, in the context of our dataset with extremely rare classes (e.g., Imposter content), those metrics can easily mask poor performance on minority categories. F1-macro equally accounts for successes in recognizing the dominant "True" category and failures in rare classes, making it the most demanding and honest evaluation criterion.
 
 Below are confusion matrices for each of the approaches:
 
-| paraphrase-MiniLM + LR                  | all-MiniLM + LR                                          |
-| --------------------------------------- | -------------------------------------------------------- |
-| ![Caption 1](images/cm_para_logreg.jpg) | ![Caption 2](images/4confusion_matrix_minilm_logreg.png) |
-| paraphrase-MiniLM + LightGBM            | all-MiniLM + LightGBM                                    |
-| ![Caption 3](images/cm_para_lgbmm.jpg)  | ![Caption 4](images/cm_minillm_lgbm.jpg)                 |
+#### Table: Optuna. Confusion Matrices
 
-And the optuna training history (val f1 / trial graph)
+|                                 paraphrase-MiniLM-L3-v2                                 |                                   all-MiniLM-L12-v2                                    |
+| :-------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
+| **Logistic Regression**<br>![CM Para LR](images/4confusion_matrix_paraphase_logreg.jpg) | **Logistic Regression**<br>![CM MiniLM LR](images/4confusion_matrix_minilm_logreg.png) |
+|      **LightGBM**<br>![CM Para LGBM](images/4confusion_matrix_paraphase_lgbm.jpg)       |      **LightGBM**<br>![CM MiniLM LGBM](images/4confusion_matrix_minilm_lgbm.jpg)       |
 
-| paraphrase-MiniLM + LR                      | all-MiniLM + LR                                        |
-| ------------------------------------------- | ------------------------------------------------------ |
-| ![Caption 1](images/optuna_para_logreg.jpg) | ![Caption 2](images/4optuna_history_minilm_logreg.png) |
-| paraphrase-MiniLM + LightGBM                | all-MiniLM + LightGBM                                  |
-| ![Caption 3](images/optuna_milm_lgbm.jpg)   | ![Caption 4](images/optuna_milm_lgbm.jpg)              |
+#### Table: Optuna. Training History
+
+|                                  paraphrase-MiniLM-L3-v2                                  |                                    all-MiniLM-L12-v2                                     |
+| :---------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------: | --- |
+| **Logistic Regression**<br>![Optuna Para LR](images/4optuna_history_paraphase_logreg.jpg) | **Logistic Regression**<br>![Optuna MiniLM LR](images/4optuna_history_minilm_logreg.png) |
+|      **LightGBM**<br>![Optuna Para LGBM](images/4optuna_history_paraphase_lgbm.jpg)       |      **LightGBM**<br>![Optuna MiniLM LGBM](images/4optuna_history_minilm_lgbm.jpg)       |     |
+
+The optimization history plots demonstrate that Optuna successfully narrowed the search spaces, discarding ineffective hyperparameter combinations and reaching mathematical optimums. Interestingly, after strict hyperparameter tuning, the optimized TF-IDF Baseline slightly overtook the tuned minilm_lgbm in F1-macro (0.5585 vs 0.5449). When comparing the confusion matrices of all tuned models, a consistent pattern emerges: absolutely all classifiers struggle to separate classes that have semantic overlap with truthful news. We observe a significant concentration of false negatives in the True category, indicating that models choose the path of least resistance under conditions of uncertainty.
+
+#### Table: Tuned models performance comparison
 
 | name              | accuracy  | macro precision | macro recall | macro f1  |
 | ----------------- | --------- | --------------- | ------------ | --------- |
@@ -226,7 +257,17 @@ And the optuna training history (val f1 / trial graph)
 | minilm_logreg     | 0.582     | 0.469           | 0.579        | 0.479     |
 | minilm_lgbm       | **0.655** | 0.520           | 0.616        | 0.545     |
 
-The results we got using semantic embeddiings were actually worse than in the case of the baseline (in terms of Macro F1 score). Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
+#### Tuned models ranked by F1‑macro
+
+| Model                  | F1‑macro |
+| ---------------------- | -------- |
+| Baseline (TF‑IDF + LR) | 0.5585   |
+| minilm_lgbm            | 0.5449   |
+| paraphrase_lgbm        | 0.5003   |
+| minilm_logreg          | 0.4807   |
+| paraphrase_logreg      | 0.4426   |
+
+The obtained results suggest that text vectorization methods have reached a plateau of effectiveness. Even after careful hyperparameter tuning and utilizing advanced transformers, the models exhibit consistent error patterns caused by the impossibility of completely separating satire or false connection from truthful headlines using purely linguistic means. This confirms the absolute necessity of moving to the final, multimodal stage of our analysis, where image data must be introduced to break this text-only barrier. Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
 
 ## Step III. The VLM (Vision-Language Model)
 
