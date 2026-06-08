@@ -185,6 +185,9 @@ Below are confusion matrices for each of the approaches:
 | ![Caption 1](images/cm_para_logreg.jpg) | ![Caption 2](images/4confusion_matrix_minilm_logreg.png) |
 | paraphrase-MiniLM + LightGBM            | all-MiniLM + LightGBM                                    |
 | ![Caption 3](images/cm_para_lgbmm.jpg)  | ![Caption 4](images/cm_minillm_lgbm.jpg)                 |
+| paraphrase-MiniLM + RF | all-MiniLM + RF |
+| ![Caption 3](images/3paraphrase__rf_ad.png) | ![Caption 4](images/3minilm-really__rf_ad.png) |
+
 
 And the optuna training history (val f1 / trial graph)
 
@@ -194,13 +197,18 @@ And the optuna training history (val f1 / trial graph)
 | paraphrase-MiniLM + LightGBM                | all-MiniLM + LightGBM                                  |
 | ![Caption 3](images/optuna_milm_lgbm.jpg)   | ![Caption 4](images/optuna_milm_lgbm.jpg)              |
 
-| name              | accuracy  | macro precision | macro recall | macro f1  |
-| ----------------- | --------- | --------------- | ------------ | --------- |
-| baseline          | **0.658** | 0.534           | **0.641**    | **0.558** |
-| paraphrase_logreg | 0.536     | 0.444           | 0.551        | 0.443     |
-| paraphrase_lgbm   | 0.609     | **0.585**       | 0.585        | 0.500     |
-| minilm_logreg     | 0.582     | 0.469           | 0.579        | 0.479     |
-| minilm_lgbm       | **0.655** | 0.520           | 0.616        | 0.545     |
+
+
+
+| name | accuracy  | macro precision | macro recall| macro f1 | 
+| ----------------------- | -------- | -------- | -------- | --------------- | 
+| baseline  | **0.658** | 0.534 | **0.641** | **0.558** |
+| paraphrase_logreg      | 0.536 | 0.444 | 0.551 | 0.443 
+| paraphrase_lgbm | 0.609 | **0.585** | 0.585 | 0.500  
+| minilm_logreg    | 0.582 | 0.469 | 0.579 | 0.479 
+| minilm_lgbm     | **0.655** | 0.520 | 0.616 | 0.545  
+| paraphrase_rf | 0.617 | **0.700** | 0.343 |  0.337 
+| minilm_rf | 0.638 | **0.731** |  0.364 | 0.379 
 
 The results we got using semantic embeddiings were actually worse than in the case of the baseline (in terms of Macro F1 score). Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
 
