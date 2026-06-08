@@ -1,25 +1,18 @@
-# Introduction
+# Report of Fakeddit Data Analysis
 
-## Motivation behind misinformation classification.
+## Introduction and motivation
 
-The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. People of today frequently access
+The problem of fake news dissemination is acute in modern society, directly threatening citizens' trust in institutions and provoking irrational panic during critical moments such as medical epidemics. Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
 
-Combating this threat requires reliable machine learning algorithms, yet their development is seriously hindered by a shortage of high-quality data. Most traditional datasets, such as LIAR or Some-Like-It-Hoax, have very substantial limitations that make them largely unsuitable for comprehensive analysis. As a rule, they are too small in volume, restricted exclusively to text format and binary classification logic (where a news item can only be true or false), and focused on very narrow subject areas, such as American politics, which prevents models from learning from diverse everyday content.
+### Dataset Charachtersitics
 
-## Fakeddit dataset
+The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the amount of information that can be used for the detection of misinformation. The data consists of post titles, images associated with them and additional metadata such as creation time, number of comments, subreddit name, etc. The authors of the original dataset carefully extracted not only the headlines and attached images but also rich metadata, including scores, author names, and audience comments.
 
-The uniqueness of the Fakeddit dataset lies in its multimodality, which allows algorithms to rely not only on isolated text but also on the visual context of images, significantly enriching the amount of information that can be used for the detection of misinformation. The data consists of post titles, images associated with them and additional metadata such as creation time, number of comments, subreddit name, etc.
-The overall quality of the data was quite good, no further pre-processing was required over the one provided by the dataset authors.
+The dataset consists of over 1 million posts, of which around 682k have an image associated with them. The posts come from across cleanest and most relevant 22 subreddits. The overall quality of the final general sample was good enough, no further pre-processing was required over the one provided by the dataset authors. During data collection there were also additional quality assurance steps, which can be reduced to all posts with score < 1, and subreddit-specific title tags removing in practice.
 
-The dataset consists of over 1 million posts, of which around 682k have an image associated with them. The posts come from across 22 subreddits.
-During data collection there were also additional quality assurance steps:
+### Labels of The Posts
 
-- removing all posts with score < 1,
-- subreddit-specific title tags were removed.
-
-### Post labels
-
-For each sample there are three different labels assigned, corresponding to different levels of granuality:
+Labeling the vast amount of data was performed using the distant supervision method (an approach that involves automatically assigning labels to all posts based on the known general theme of the subreddit from which they were extracted). This eliminates the need to manually label each individual post. Thus, for each sample there are three different labels assigned, corresponding to different levels of granuality. We will describe it here vividly, but concisely:
 
 - 2-way labels: a `True/False` split - represents whether or not the posts presents factual information
   ![alt text](images/2_way_label.png)
@@ -35,17 +28,17 @@ For each sample there are three different labels assigned, corresponding to diff
   - manipulated content: content that has been manually altered e.g. via image modifications
     ![alt text](images/6_way_label.png)
 
-### The labeling process
+It should be noted that some of these categories, in particular Manipulated Content, consist almost entirely of visually altered pictures, so when creating narrowly focused models that analyse only textual data, it is advisable to disregard such labels so as not to introduce unnecessary mathematical noise into the training sample. The experiments from the original authors showed that combining text and images works much better than using just one, with the winning setup being BERT plus ResNet50 merged via max pooling. Error analysis revealed that models struggle the most with bot‑generated content and satire (which requires real‑world knowledge), while manipulated images are surprisingly easy to catchthough a bias toward the “True” label remains due to class imbalance.
 
-In context of Fakeddit dataset it is very important to point out how the labels were assigned. For each subreddit the authors of the dataset chose they've inspected 10 random samples. If the 6-way label they assigned for each of the sample matched - then the subreddit was kept in the dataset and the label was assigned to each post in the subreddit.
+For each subreddit the authors of chosen dataset they've inspected 10 random samples. If the 6-way label they assigned for each of the sample matched, so then the subreddit was kept in the dataset and the label was assigned to each post in the subreddit.This means the misinformation classification task turns into just predicting the subreddit based on the title alone.
+
 ![alt text](images/flawed_labeling.png)
 
-This labeling process makes it so that misinformation classification tasks devolves into task of predicting the subreddit from the title.
-An interesting assignment is "manipulated" for `psbattle_artwork` subreddit - since it consists of posts that rely on image manipulation - albeit it's use seems rather satirical.
+A curious example is the label "manipulated" for the subreddit psbattle_artwork. That subreddit does contain image manipulation, but the posts there are mostly satirical in nature.
 
-### Examples
+### Some Indicative Examples
 
-![alt text](images/huge_cat.png)
+![hugecat](images/huge_cat.png)
 
 Above is a picture of a cat titled "he looks huge". This post comes from `confusing_perspective` subreddit - thus it's labeled as false connection.
 
@@ -60,6 +53,26 @@ Cleaned title: "newspaper illustration depicting japan shooting china with the b
 ![propaganda2](images/propangda2.webp)
 
 Another propaganda poster "roosevelt figured wrong the tentacles of the dollaroctopus will be cut the jews in the white house and the gold in fort knox have been surrounded by young people by the armies of labor nsb poster from the netherlands"
+
+## Proposed Pipeline & Workflow
+
+To formalise our project, we need to describe the structure and order of data manipulations. The creators of the original Fakeddit were extremely concise in their assessments. Their publication contains almost no detailed steps or conventions for handling intermediate results. The final metrics are presented rather sparingly, which complicates direct analysis. Therefore, this project offers an alternative approach. It is not merely a technical replication but an attempt to deepen and conceptually rethink the conclusions of the benchmark authors. The main business task is to independently verify the results obtained by original authors. We strive to build alternative methods for constructing classifiers and to see whether these new, more modern approaches can surpass the original or provide serious competition in real world conditions. The implementation of our plan differs qualitatively from that proposed by the original due to strict objective constraints. The main challenge was the colossal size of the image database, exceeding 100 gigabytes. Operating with such multimedia arrays on basic computing resources is technically extremely difficult. However, despite of it, we deliberately decided to raise the complexity bar even more, abandoning the initially considered simplified version of the dataset containing only 55k items. We took instead a huge sample from the original dataset crafted on Kaggle, comprising about 700k records. An important consequence of this decision became a key feature of our pipeline. **The vast majority of analytical work is carried out exclusively on textual data**. Adding visual content became just and exclusively the final stage of our project.
+
+Given the stated business goals and constraints, we built a strict sequence of dataset analysis consisting of five evolving stages. Each subsequent step logically follows from the limitations and problems of the previous one. The first stage involves exploratory data analysis (EDA) and data cleaning. Without this step, any metrics would be distorted by information noise, so obtaining a clean base of 700k items became the foundation for all further actions. In the second stage we create baseline models based on TF‑IDF. The business always needs a starting point, the simplest and fastest algorithm against which all expensive and complex solutions will be compared. However, the baseline relies on primitive word counting and completely ignores the semantics of language. Understanding this conceptual limitation naturally leads to the third stage: testing advanced ensemble models _in combination with modern language transformers_. Here we use embedders to extract deep meaning from texts and feed these complex data to algorithms such as LightGBM. When we find the most successful combination of model and embedder, the issue of tuning is being considered, beacause default algorithm settings do not alsways allow extracting maximum efficiency. So, in the next step the Optuna framework basically tune hyperparameters to the specific geometry of our analysed information. Finally, as we are awared, that text alone models cannot evaluated properly the situation with false connection or tricky text-picture interplay, the Vision‑Language Model was cosidered and used on the data.
+
+Each stage of our pipeline is driven by a set of general assumptions (_or hypotheses_). First, we expect to **achieve results close to those obtained in the original study**, assuming that our overwhelming focus on textual data in the first four stages will not lead to a radical drop in metrics compared to the overall benchmark. Second, we test the hypothesis that **alternative modern text transformers will be able to demonstrate significantly better results**, even taking into account our computational constraints. We hope that the theoretical effectiveness of these complex tools will be unequivocally proven in practice, because otherwise the feasibility of their implementation in real business processes would be highly questionised. Finally, the original paper leaves some ambiguity regarding how critical the presence of images is for the claimed fine‑grained classification. Recognising the specificity of the Fakeddit dataset, we assume the some particular importance of visual content. Therefore, our final business hypothesis is that **the image‑based classification model will show a result at least comparable to the best purely text‑based model**, and ideally surpass it.
+
+## Teoretical Fundamentals
+
+Within our project, the processing of Fakeddit dataset could be understood as supervised learning task. We aim to build a model that uncovers hidden patterns and predicts one of six categories for new posts. From this perspective, it should be reminded, hat classification technique basically finds separating boundaries in a described feature space. Since we have six classes, we use multiclass strategies such as One‑vs‑Rest or native multiclass algorithms. Also before mere modelling, we perform Exploratory Data Analysis (EDA) using descriptive statistics and visualizations to detect class imbalance, text length distributions, and potential outliers. Strong imbalance would bias predictions toward the majority class. Data cleaning is critical to prevent data leakage problems, where test information accidentally enters training (e.g., duplicate posts). As a part of data cleaning, we remove rows with critical missing information rather than imputing them, considering the fact that synthetic values often distort semantic meaning to protect mathematical and semantic purity of the training sample.
+
+To establish a meaningful benchmark, we begin with a simple and interpretable baseline: TF‑IDF vectorization combined with logistic regression. TF‑IDF converts text into a sparse numerical matrix by counting term frequencies and penalizing words that appear too often across the corpus, thereby highlighting truly distinctive terms. Logistic regression then takes these vectors, computes a weighted sum of features, and passes it through a sigmoid function to produce a probability of a post being fake. This baseline is mathematically transparent, fast, and allows us to directly inspect which words the model considers deceptive. But, linear models often fail to capture non‑linear patterns in language, so we turn to ensemble methods, specifically Random Forest and LightGBM. Random Forest builds many independent decision trees in parallel, reducing variance and overfitting. LightGBM, a gradient boosting algorithm, sequentially adds trees that correct the errors of previous ones by approximating the antigradient of the loss function. Its histogram‑based discretization and leaf‑wise tree growth (always splitting the leaf that gives the largest error reduction) make it exceptionally fast and accurate on large datasets.
+
+It slould be said that fundamental limitation of TF‑IDF is that it ignores word order and context, treating each text as a mere bag of words. To capture semantic meaning, we use language embeddings from SentenceTransformers. These dense vectors encode entire sentences such that geometrically close vectors indicate semantically similar texts, even without shared vocabulary. We employ lightweight models like all‑MiniLM‑L12‑v2 and paraphrase‑MiniLM‑L3‑v2, which are products of knowledge distillation. They mimic large neural networks but have far fewer parameters, making them fast in some sense. The paraphrase family is particularly valuable for our project because it recognises hidden manipulation even when fake news authors rephrase known false narratives. After obtaining these semantic features, we need to ensure our classifiers perform at their best. Instead of relying on default hyperparameters, we use Optuna, a Bayesian optimization framework based on the TPE (Tree‑structured Parzen Estimator) algorithm. Optuna does not blindly search but mathematically analyses previous trials to select the most promising hyperparameter values. For our baseline, we tune the TF‑IDF parameters (max_df, min_df) and the logistic regression regularization strength. For LightGBM, we optimise the number of trees, learning rate, tree depth, and leaf count.
+
+The final theoretical step in our project is the shift from text‑only to multimodal analysis, mainly because og the percantage of unsed visual contents before this stage. Thats why we try here modern Vision‑Language Models (VLMs), which go far beyond traditional convolutional networks by deeply integrating visual and textual perception. At their core are so-called Vision Transformers that split an image into small patches, convert them into numbers, and project them into the same hidden space as text tokens. Cross‑attention layers allow the model to compare written words with specific objects in the image. In practice we feed the model both an image and the post’s headline simultaneously, then extracting the last layer’s hidden states, applying an attention mask to filter padding, and average the results to obtain a single fused vector that combines the meaning of text and image in the end. This fused representation can be theoretically crucial because of the detection enabling of the most difficult category, False Connection, where a truthful text and a ambigious photo are deliberately paired to create a some type of compromised story.
+
+## Step I. Introdactory EDA & Cleaning
 
 ### Temporal resolution
 
@@ -91,7 +104,7 @@ Utilizing these could be a future direction.
 Using metadata is also tricky, for example authors mostly appear once or twice, although there are some clear outlines - which could bring some signal.
 ![distribution of author post counts](images/auth_count_dist.png)
 
-## Text-only models
+## Step II. The Power and Unitily of Just-Text Models
 
 For our initial experiments we have only used one column of the dataset `clean_title`. It consists of cleaned post titles as described previously.
 
@@ -196,7 +209,7 @@ And the optuna training history (val f1 / trial graph)
 
 The results we got using semantic embeddiings were actually worse than in the case of the baseline (in terms of Macro F1 score). Nonetheless we believe they could generalize better since they do not suffer from the same data leakage problem.
 
-## Using Vision-Language Models
+## Step III. The VLM (Vision-Language Model)
 
 ### Gathering images
 
@@ -256,7 +269,7 @@ On the reduced dataset with `(image, clean_title)` pairs we have achieved:
 which is much better result than for any of the previous approaches.
 Visual data in fact did help.
 
-## Future directions
+## Implications and Future Directions
 
 Next steps that could be taken are:
 
